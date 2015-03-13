@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<roster>
+	<member username="aaflem">
+		<email>m152196@usna.edu</email>
+		<fname>Aaron</fname>
+		<lname>Fleming</lname>
+		<co>11</co>
+	</member>
+	<member username="aquaMan">
+		<email>m150008@usna.edu</email>
+		<fname>Walter</fname>
+		<lname>Door</lname>
+		<co>2</co>
+	</member>
+	<member username="notbatman">
+		<email>bruce@wayneenterprises.com</email>
+		<fname>bruce</fname>
+		<lname>wayne</lname>
+		<co>N/A</co>
+	</member>
+</roster>

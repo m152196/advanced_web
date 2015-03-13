@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<LIST>
+	<USER>
+		<USERNAME>the_joe</USERNAME>
+		<EMAIL>m150000@usna.edu</EMAIL>
+		<FNAME>Joe</FNAME>
+		<LNAME>Gish</LNAME>
+		<CO>1</CO>
+	</USER>
+	<USER>
+		<USERNAME>aquaMan</USERNAME>
+		<EMAIL>m150008@usna.edu</EMAIL>
+		<FNAME>Water</FNAME>
+		<LNAME>Door</LNAME>
+		<CO>2</CO>
+	</USER>
+	<USER>
+		<USERNAME>aaflem</USERNAME>
+		<EMAIL>m152196@usna.edu</EMAIL>
+		<FNAME>Aaron</FNAME>
+		<LNAME>Fleming</LNAME>
+		<CO>11</CO>
+	</USER>
+	<USER>
+		<USERNAME>/dev/null</USERNAME>
+		<EMAIL>m150876@usna.edu</EMAIL>
+		<FNAME>Devon</FNAME>
+		<LNAME>Budzitowski</LNAME>
+		<CO>23</CO>
+	</USER>
+	<USER>
+		<USERNAME>j_looms</USERNAME>
+		<EMAIL>m154260@usna.edu</EMAIL>
+		<FNAME>Justin</FNAME>
+		<LNAME>Loomis</LNAME>
+		<CO>18</CO>
+	</USER>
+	<USER>
+		<USERNAME>z</USERNAME>
+		<EMAIL>m154500@usna.edu</EMAIL>
+		<FNAME>Zane</FNAME>
+		<LNAME>Markel</LNAME>
+		<CO>18</CO>
+	</USER>
+</LIST>

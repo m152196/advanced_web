@@ -1,0 +1,149 @@
+/*
+	Aaron Fleming
+	152196
+	Lab02
+*/
+body {
+	background-color:turquoise;
+	text-align:center;
+	font-family:"Lucida Console";
+}
+
+table {
+	border: 1px solid black;
+	background-color:white;
+}
+
+table.center {
+	margin-left:auto;
+	margin-right:auto;
+	/* http://www.granneman.com/webdev/coding/css/centertables/ */
+}
+
+#actions, #listMembers {
+	text-align:left;
+	width:100%;
+	margin-left:40%;
+	margin-right:auto;
+}
+
+#actions h4 {
+	margin-left:7%;
+	text-decoration:underline;
+}
+
+li {
+	text-align:left;
+}
+
+#actions li span:hover {
+    cursor:pointer;
+    color:blue;
+	background-color:white;
+	text-decoration:underline;
+}
+
+#mode, td {
+	text-align:center;
+}
+
+td, th {
+	background-color:white;
+	border: 1px solid black;
+	cursor:default;
+}
+
+#footer {
+	visibility:hidden;
+	font-family:times;
+	position: fixed;
+	width: 100%;
+	bottom:0;
+	overflow:hidden;
+}
+
+#invalidUser {
+	color:grey;
+}
+
+#search {
+	border: 0px solid black;
+	background-color:white;
+}
+
+.format_cell {
+	background-color:white;
+	border: 0px solid black;
+	cursor:default;
+}
+	
+#search_header th {
+	background-color:white;
+	border: 0px solid black;
+	cursor:default;
+	font-weight:bold;
+}
+
+.result_cell {
+	background-color:white;
+	border: 1px solid black;
+	cursor:default;
+	min-width: 100px;
+}
+
+div.center {
+	margin-left:auto;
+	margin-right:auto;
+	background-color:white;
+	padding-top:10px;
+	padding-bottom:10px;
+}
+
+section .demo {
+	display: block;
+	max-width: 100%;
+	position: relative;
+	color: #fff;
+	-webkit-background-size: cover;
+	-moz-background-size: cover;
+	background-size: cover;
+	text-transform: uppercase;
+	font-weight: bold;
+	letter-spacing: -0.3rem;
+	line-height: 1;
+	text-align: center;
+	padding-top: 2rem;
+	-webkit-transition: color 0.3s;
+	-moz-transition: color 0.3s;
+	-o-transition: color 0.3s;
+	-ms-transition: color 0.3s;
+	transition: color 0.3s;
+	/* much of this styling is used from http://www.oridomi.com */
+}
+
+#logo_text {
+	font-size: 0.75em;
+}
+
+#boundary {
+	border: 1px solid black;
+}
+
+/* jQuery popup plugin */
+.well {
+        box-shadow: 0 0 10px rgba(0,0,0,0.3);
+        display:none;
+        margin:1em;
+		background-color: white;
+		color: red;
+    }
+
+#column1 {
+	float: left;
+	width: 50%;
+}
+
+#column2 {
+	float: right;
+/*	width: 50%; */
+}

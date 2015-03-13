@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+
+<!-- 
+Aaron Fleming
+m152196
+default.htm
+ --> 
+
+<html>
+
+<head>
+	<meta charset="utf-8" />
+	<title>Fleming Labs - IT452</title>
+	<link rel="stylesheet" type="text/css" href="styles.css" />
+</head>
+
+<body>
+
+	<h1>Welcome to the labs of 1/C Fleming</h1>
+	<p>"You can sleep when you're dead."</p>
+
+	<br/>
+	<h3>The Labs</h3>
+	<p>The following are links to the different labs, the specific implementation requirements of the lab, and 
+	instructions on how to see that each requirement was met. Unless otherwise specified, implementation of requirements can be seen on the same page. This page can
+	be visited by clicking on the link to "index.html." Many requirements have multiple
+	implementations, but only one such implementation is listed.:
+	</p>
+
+	<!-- Just uncomment the next lab's link when you're ready! -->
+	<p><a href="Lab01/index.html">Lab01 index.html</a>
+	<br/>Directions:
+	</p>
+	<ul>
+		<li>"default.htm present, with link to Lab01 and disclaimer" - This page is default.htm, link to Lab01 is above, and disclaimer is below.</li>
+		<li>"main page introduces lab theme" - Click the link to index.html. Next to the link to the DOM portion of the lab is an introduction of the lab theme.</li>
+		<li>"main page has picture, uses external CSS" - Click the link to index.html. Picture is at the top of the page. Right click the page and select 
+		   "View page source". In the &lt;head&gt; tag is the link to the external style sheet style.css.</li>
+		<li>"main page looks GOOD (aesthetics)" - Subjective interpretation of "GOOD". Click the link to index.html and determine whether or not you feel 
+			the page indeed looks GOOD.</li>
+		<li>"can move existing node to somewhere else" - Select the "Cut" action, click on the cell to be moved, click on the paste action, and then click 
+			on the cell to which you want to move the original cell.</li>
+		<li>"can create new text node or other element" - Select the "Insert Cell (left)" action, and then click on any cell in the table.</li>
+		<li>"can delete some element" - Select the "Delete Cell" action, and then click on any cell in the table.</li>
+		<li>"does iteration over all children of some node" - Select the "Set Row Background Color" action, type in the desired color, and then click on any cell.
+			The children of the row containing that cell are iterated over, and the background color of each is changed to the specified color.</li>
+		<li>"can dynamically change style of some node" - Select the "Bold" action, and then click on any cell.</li>
+		<li>"user never gets 'stuck' with nothing to do (unless user deletes everything)" - The only way to prevent actions from working is to use "Delete Cell" 
+			or "Delete Row" to remove every cell from the table. As long as there is at least one cell remaining, all of the actions are able to be used.</li>
+		<li>makes intelligent use of 'tagName' or 'nodeType'" - Select the "Set Background Color by Tag Type" action, enter a desired tag type, and then enter
+			a desired color. Document will iterate over every element with that tag type and change the background color of that element to the color specified.</li>
+		<li>"default.htm has good, specific instructions. What exactly to click, enter, etc. to see that you met the requirements?" - This page is default.htm,
+			and this list is exactly that, "good, specific instructions" that tell a user exactly what to do to see that these requirements have been implemented.</li>
+		<li>"default.htm and Lab01/index.html named correctly" - This page is default.htm. Look up in the URL to see the name of this page. Click the link to 
+			index.html, and look up in the URL to see the name of that page.</li>		   
+	</ul>
+	
+	<p><a href="Lab02/index.html">Lab02 index.html</a>
+	<br/>Directions:  All requirements can be seen on the 'index.html' page. Simply fill out the member registration form with a desired username, 
+	a valid email, a first name, a last name, and a company. Asynchronous AJAX is utilized in the validation of both the 'Username' and 'Email' fields.
+	After each keystroke, an asynchronous JavaScript request is sent to the server to return an XML file which is then parsed by the JavaScript. If a 
+	username is available, it will be highlighted in green. If it is taken, it will be highlighted in red. In either instance, a status message appears to the
+	right of the input box, telling the user whether the username is taken or not. To test a username that is taken, try the value 'aaflem' or click the 'List
+	Current Members' button to see all usernames that are unavailable. Clicking the 'Register' button with invalid entries will print an error message to the user
+	and refrain from registering the user. Doing so with all valid entries will do a mock registration. A success message is printed out, but no account is actually
+	registered. Synchronous AJAX is utilised in the 'List Current Members' button. Clicking this button sends a synchronous JavaScript request to the server to 
+	return an XML file which is then parsed by the JavaScript. For each member, the first name, last name, and username are appended to an unordered list and
+	displayed on the page.</p>
+	<p><a href="Lab03/index.html">Lab03 index.html</a>
+	<br/>Directions:  All requirementes can be seen on the 'index.html' page. To insert a new entry into the database, properly fill out the
+	the registration form with an unclaimed username, a valid unused email, a first name, a last name, and a company. Click 'Register' when all fields are
+	highlighted in GREEN. The browser will make an asynchronous call to the Perl script register.pl, which will do the actual interaction with the database
+	to insert the values entered into the database. If one or more of the fields are RED, the 'Register' button will not proceed with the registration and some
+	error text will appear in red. The second Perl script, roster.pl, is called by clicking the 'List Current Members' button. This synchronous call to the server
+	will query the database for all the users and return the values in XML. Javascript will parse this XML and produce a list of all the users underneath the button.
+	Upon clicking the button, four more buttons will appear that allow the user to rearrange the list of users into Ascending or Descending order by either last
+	name or username. The roster.pl script is synchronously invoked for all of these, but extra paramaters are specified to allow the database to return the
+	results in the desired order.</p>
+	<p><a href="Lab04/index.html">Lab04 index.html</a>
+	<br/>Directions:  All requirements can be seen on the 'index.html' page. AJAX calls that have been rewritten using jQuery can be made just like they were made
+	in Lab03. A search bar has been added to utilize the jQuery autocomplete plugin. To test the autocomplete, start typing a username into the search bar. Typing the
+	letter 'n' yields multiple autocompletion choices. Extra credit work has been done to rank the autocomplete results and return the results in order of usernames
+	that are most often searched. I have reset the database so that all usernames have been searched 0 times. To see the ranking in action, type 'notbatman' into the search bar.
+	You will notice that this username initially does not start at the top of the autocomplete list. Click 'Search' and then delete the contents of the search bar. If you
+	begin typing 'notbatman' again, you will notice that this username now appears at the top of the autocomplete list. You can search for various other usernames and see them
+	appear higher up on the list of autocompletion choices as they are searched more often. The new jQuery plugin I implemented is called 'oriDomi'. It allows you to "fold the DOM
+	like paper." Click the 'Start' button, just beneath the Information Warfare Group logo, to begin using my implementation of this plugin. As you click the button, the text on the
+	button will change to a way in which you can manipulate the logo. Click the new button to make execute an example manipulation of the logo. You can also manually manipulate the
+	logo by clicking and dragging it in different directions. The way in which you can manipulate the logo will correspond with the button you have most recently clicked. Finally,
+	I did even more extra credit by implementing an extra jQuery plugin. This last plugin is the 'Endless Div Scroll' plugin. This plugin can be seen in action as it endlessly
+	scrolls the text description I have written about the IWG. Once the entirety of the text has scrolled across the screen, the text will start over and continue scrolling. You can
+	pause the scrolling by hovering your mouse over the text.</p>
+	<p><a href="Lab05/game.html">Lab05 game.html</a>
+	<br/>Directions:  Lab05 has an in-depth instruction page that is visible on the game.html page. Follow the instructions there to learn how to play RACK-MAN. The three types
+	of interactions available to the user are moving the character around (with the arrow keys or the 'a', 's', 'w', and 'd' keys), pausing the game by pressing the ESC key or by 
+	clicking on the 'Pause Game' button, and killing bedbugs by clicking on them once the 'Splatter' has been picked up by the user. The 'Splatter' is located in the top-right corner 
+	of the map. Simply walk over it to pick it up, and then click on a bedbug to kill it. There are currently 17 moving objects, which can easily scale up or down to any number desired. 
+	The main page details the story behind the game, how to win the game, how to lose the game, and how to earn points.
+	</p>
+	<!--
+	<p><a href="Lab06/index.html">Lab06 index.html</a>
+	<br/>Directions:  YOUR_SPECIFIC_DIRECTIONS</p>
+	<p><a href="Lab07/index.html">Lab07 index.html</a>
+	<br/>Directions:  YOUR_SPECIFIC_DIRECTIONS</p>
+	<p><a href="Lab08/index.html">Lab08 index.html</a>
+	<br/>Directions:  YOUR_SPECIFIC_DIRECTIONS</p>
+	<p><a href="Lab09/index.html">Lab09 index.html</a>
+	<br/>Directions:  YOUR_SPECIFIC_DIRECTIONS</p>
+	-->
+
+	<!-- <p><a href="superSecretPage.html"> Don't click here </a></p> -->
+	<br/><br/>
+	<h4>Legal Disclaimer</h4>
+	<p>None of the content within this web site or the web sites of the members of this course are intended for distribution in any way, shape, or form. Nor is any attempt being made to disrupt the profiting capability of the copyright holders. The contents of this web site and the web sites of the members of this course are solely intended for educational use of the students and the instructor. All content herein is included strictly for the demonstration of implemented course objectives.</p>
+
+	<p><br/><br/> </p>
+	<hr/>
+	<p>
+		<script type = "text/javascript">
+		 document.write('<a href="http://intranet.cs.usna.edu:8888/?doc='+document.location+'">' +
+			'<img src="http://www.w3.org/html/logo/img/mark-word-icon.png"'+
+			'alt="Valid HTML 5!" height="50" width="50" />'+
+		  '</a>');
+		</script>  
+		This page last modified 
+		<script type="text/javascript">
+		  document.write(document.lastModified);
+		</script>
+	</p>
+  
+
+
+</body>
+
+</html>

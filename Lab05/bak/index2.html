@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<!--
+	Aaron Fleming
+	152196
+	Lab05
+	index.html
+-->
+
+<html>
+<head>
+	<meta charset="utf-8" />
+	<title>RACK-MAN</title>
+	<link rel="stylesheet" type="text/css" href="../styles.css" />
+	
+	<!-- Include jQuery -->
+	<script type="text/javascript" src="jquery.min.js"></script>
+	
+	<!-- Include jQuery Popup Overlay -->
+	<script src="http://vast-engineering.github.io/jquery-popup-overlay/jquery.popupoverlay.js"></script>
+	<script type="text/javascript">
+
+		const VELOCITY = 1;
+		const LEFT = [-VELOCITY,0];
+		const RIGHT = [VELOCITY,0];
+		const UP = [0,-VELOCITY];
+		const DOWN = [0,VELOCITY];
+		const DIRECTIONS = [LEFT, UP, RIGHT, DOWN];
+		
+		const HEIGHT = 400;//898;
+		const WIDTH = 500;//1298;
+		const LEFT_WALL = 0;
+		const RIGHT_WALL = WIDTH;
+		const TOP_WALL = 0;
+		const BOTTOM_WALL = HEIGHT;
+		
+		const PLAYER_HEIGHT = 45;
+		const PLAYER_WIDTH = 15;
+		const PLAYER_SRC = "img/figure_backgroundless.png";
+		
+		const BEDBUG_HEIGHT = 16;
+		const BEDBUG_WIDTH = 14.5;
+		const BEDBUG_SRC = "img/bedbug2_backgroundless.png";
+		const NUM_BEDBUGS = 10;
+		
+		const ITEM_HEIGHT = 25;
+		const ITEM_WIDTH = 25;
+		
+		const SPLATTER_SRC = "img/splatter.png";
+		
+		const RACK_SRC = "img/bed2.png";
+		const RACK_HEIGHT = 60;
+		const RACK_WIDTH = 50;
+		
+		const MATE_SRC = "img/mate.png";
+		const MATE_HEIGHT = PLAYER_HEIGHT + PLAYER_HEIGHT/3;
+		const MATE_WIDTH = PLAYER_WIDTH + (1.5 * PLAYER_WIDTH);
+		
+		const STAIR_HEIGHT = 70;
+		const STAIR_WIDTH = 60;
+		const LEFT_STAIR_SRC = "img/left_staircase.png";
+		const RIGHT_STAIR_SRC = "img/right_staircase.png";
+		
+		const MAIN_INTERVAL = 10;//10; // mainLoop() interval in milliseconds
+		const MESSAGE_INTERVAL = 5000;
+		
+		const TIME_INTERVAL = 300;//500;//1000;
+		
+		// start time 10:00pm
+		var HOUR = 22;
+		var MIN = 0;
+		
+		var BONUS = 1000
+		
+		var SCORE = 0;
+		var HIGHSCORE;// = 100;
+		var HIGHSCORE_HOLDER;
+		const BEDBUG_POINTS = 250;
+					
+		var GAME_AREA;
+					
+		var alertedHighscore;
+		var alertedTaps;
+		var gamePaused;
+		var gameOver;
+		
+		var pauseInterval;
+		var mainInterval;
+		var timeInterval;
+		var messageInterval;
+		
+		var player;
+		var stair1;
+		var stair2;
+		var bedbugs = [];
+		var items = [];
+		var rack;
+		var mate;
+		
+		//DEBUG
+		var response;
+		
+		function init() {
+			// Clear the page
+			var body = $("body");
+			
+			// Remove background image
+			body.css('background-color', '#ffffff');
+			body.css('background-image', 'none');
+			$("#start_screen").remove();
+			body.css({backgroundImage: "none", backgroundColor: "white"});
+			
+			var wrapper = $("<div id='wrapper'></div>");
+			var column1 = $("<div id='column1' class='column'></div>");
+			var column2 = $("<div id='column2' class='column'></div>");
+			
+			GAME_AREA = $("<div id='GAME_AREA' class='game' ></div>");
+			GAME_AREA.css({position: "absolute", height:HEIGHT, width:WIDTH, backgroundColor:"cyan", margin:"0 auto"});
+			column1.prepend(GAME_AREA);
+			//addPopup(GAME_AREA);
+			
+			// Initialize game booleans
+			alertedHighscore = false;
+			alertedTaps = false;
+			gamePaused = false;
+			gameOver = false;
+			
+
+			// Initialize staircase 1
+			stair1 = new IdentifiableObject(0, HEIGHT/2 - STAIR_HEIGHT/2, STAIR_WIDTH, STAIR_HEIGHT, "stair1", LEFT_STAIR_SRC);
+			// Initialize staircase 2
+			stair2 = new IdentifiableObject(WIDTH - STAIR_WIDTH, HEIGHT/2 - STAIR_HEIGHT/2, STAIR_WIDTH, STAIR_HEIGHT, "stair2", RIGHT_STAIR_SRC);
+			// Initialize the bed
+			rack = new IdentifiableObject(2, 2, RACK_WIDTH, RACK_HEIGHT, "rack", RACK_SRC);
+			// Initialize the 'Splatter'
+			items[0] = new Item(WIDTH - (ITEM_WIDTH + 2), 2, "item0", SPLATTER_SRC, 'Splatter');
+			// Initialize the mate with TAPS
+			mate = new Mate(2, HEIGHT - MATE_HEIGHT - 2, MATE_WIDTH, MATE_HEIGHT, 0, 0, "mate");
+			
+			// Initialize player
+			player = new Player(/*(Math.floor(Math.random() * (WIDTH + 1 - PLAYER_WIDTH)))*/ WIDTH - PLAYER_WIDTH,
+									   /*(Math.floor(Math.random() * (HEIGHT + 1 - PLAYER_HEIGHT)))*/ HEIGHT - PLAYER_HEIGHT,
+									   PLAYER_WIDTH,
+									   PLAYER_HEIGHT,
+									   0,
+									   0,
+									   "player"
+									   );
+									   
+			
+			for(var i = 0; i < NUM_BEDBUGS; i++) {
+				bedbugs[i] = new BedBug(i * BEDBUG_WIDTH + i, 2, BEDBUG_HEIGHT, BEDBUG_WIDTH, 0, VELOCITY, "bug" + i);
+			}
+			
+			
+			$(document).keydown(handleKeypress);
+			
+			
+			// Initialize scoreboard and message board
+			column2.append('<div id="highscore_div">HighScore: <span id="highscore"></span></div><br/>');
+			column2.append('<div id="score_div">Score: <span id="score"></span></div><br/>');
+			column2.append('<div id="time_div">Time of Day: <span id="time"></span></div><br/>');
+			column2.append('<div id="bonus_div">Time Bonus Points remaining: <span id="bonus"></span></div><br/>');
+			column2.append('<button class="my_popup_open" onclick="pauseGame()">Pause Game</button><div></div>');
+			
+			var popup = $('<div id="my_popup" class="well" style="max-width:44em;"></div>');
+			popup.append('<h4>GAME PAUSED</h4>');
+			popup.append('<p>You have paused the game. Click the "Resume Game" button or press ESC to continue.</p>');
+			popup.append('<button class="my_popup_close" onclick="resumeGame()">Resume</button><br/><br/>');
+			
+			
+			column2.append('<br/>\n<div id="message"></div>');
+			
+			wrapper.append(column1);
+			wrapper.append(column2);
+			body.prepend(wrapper);
+			body.prepend(popup);
+			
+			$('#my_popup').popup();
+			
+			addFooter();
+			
+			
+			// Display initial time and score values
+			//setHighScore(0);
+			retrieveHighscore();
+			increaseScore(0);
+			$("#time").text(padTime(HOUR) + padTime(MIN));
+			$("#bonus").text(BONUS);
+			
+			// Call main loop after specified amount of milliseconds
+			mainInterval = setInterval("mainLoop()", MAIN_INTERVAL);
+			timeInterval = setInterval("incrementTime()", TIME_INTERVAL);
+			messageInterval = setInterval("clearMessage()", MESSAGE_INTERVAL);
+		}
+		/* 
+		 * Function responsible for all of the action in the game. It moves the player, moves all of the bugs, checking
+		 * to see if any touch the player. If a bug touches the player, the game ends. Then it checks to see if the player
+		 * has touched an item, if so, the item is picked up.It checks if the time is past 2400, if so, and if TAPS has not
+		 * been signed, the game ends. It also checks to see if the user touches the mate, if so, TAPS is signed if it has
+		 * not already been signed. Next, the mate moves if it is after 2245. Finally, it checks if the user touches the rack,
+		 * if the user does touch it, then the game ends if all of the bugs are dead and TAPS has been signed. If either or 
+		 * both prerequisites have not been met, a message is set accordingly and the game continues.
+		 */
+		function mainLoop() {
+			player.move();
+			for(var i = 0; i < bedbugs.length; i++) {
+				bedbugs[i].move();
+				if(player.touches(bedbugs[i])) {
+					endGame(false, 'GAME OVER! You were infected <br> by a bedbug!');
+				}
+			}
+			for(var i = 0; i < items.length; i++) {
+				if(player.touches(items[i])) {
+					player.pickUp(items[i]);
+				}
+			}
+			if(!player.taps) {
+				if(HOUR >= 24) {
+					endGame(false, 'GAME OVER! You didn\'t sign TAPS <br/> before midnight!');
+				}
+				if(player.touches(mate)) {
+					player.taps = true;
+					setMessage('You\'ve signed TAPS. <br/>That means no more leaving deck!', 'green');
+				}
+			}
+			// Mate will move if time is after 2245
+			//if(HOUR >= 24 || (HOUR >= 23 && MIN >= 30)) {
+			if(HOUR >= 23 || (HOUR >= 22 && MIN >= 45)) {
+				if(!alertedTaps && !player.taps) {
+					setMessage('It\'s 2245, TAPS is now roaming. <br/> You better hurry up and sign!', 'red');
+					alertedTaps = true;
+				}
+				mate.move();
+				mate.move();
+			}
+			if(player.touches(rack)) {
+				if(!player.taps || !areDead(bedbugs)) {
+					var alertMsg = "You can't go to bed yet, <br/>";
+					if(!player.taps && !areDead(bedbugs)) {
+						alertMsg += "you haven't signed TAPS yet, and <br/> there are still bedbugs on the loose!";
+					}
+					else if(!player.taps) {
+						alertMsg += "you haven't signed TAPS yet!";
+					}
+					else {
+						alertMsg += "there are still bedbugs on the loose!";
+					}
+					setMessage(alertMsg, 'red');
+				}
+				else {
+					endGame(true, 'Congratulations! You rid Bancroft Hall of <br/> bedbugs! Go enjoy some well deserved sleep!')
+				}
+			}
+		}
+		
+		/*
+		 * Ends the execution of the game, and carries out the appropriate action depending on whether or not the player won the game.
+		 * If the player did win, the score is increased by any remaining bonus time. If the player achieved a highscore, the player is
+		 * prompted to enter a username, and the highscore in the database is updated accordingly. If the player did not win, the score 
+		 * is reset to 0. In both cases, a message is displayed to the player, describing the reason for the game being over.
+		 */
+		function endGame(wonGame, msg) {
+			gameOver = true;
+			var msgColor;
+			if(wonGame) {
+				increaseScore(BONUS);
+				msgColor = 'green';
+				if(alertedHighscore) {
+					var username = prompt('Congratulations on achieving a new highscore!\n Enter your name: ');
+					updateHighscore(username, HIGHSCORE);
+				}
+			}
+			else {
+				SCORE = 0;
+				msgColor = 'red';
+			}
+			setMessage(msg, msgColor);
+			// Stop game execution
+			clearInterval(mainInterval);
+			// Stop timer increase
+			clearInterval(timeInterval);
+			// Stop messages from being cleared
+			clearInterval(messageInterval);
+		}
+		
+		function updateHighscore(user, score) {
+			var ajaxSettings = {
+				type: "GET",
+				url: "setHighscore.pl?",
+				data: "username=" + user + "&highscore=" + score,
+				//success: alertMe,
+				error: function(xhr, status, error) { alert("error: " + error ); }
+			}
+			$.ajax(ajaxSettings);
+		}
+		
+		function alertMe(resp) {
+			alert('updated highscore');
+		}
+		
+		function retrieveHighscore() {
+			var ajaxSettings = {
+				type: "GET",
+				contentType: "application/json; charset=utf-8",
+				url: "getHighscore.pl?",
+				success: function(resp) { 
+					setUserHighscore(resp.highscore, resp.username);
+				},
+				error: function(xhr, status, error) { alert("error: " + error ); }
+			}
+			$.ajax(ajaxSettings);
+		}
+		
+		function removeBug(theBug) {
+			if(!gameOver && !gamePaused) {
+				if(player.hasItem('Splatter')) {
+					for(var i = 0; i < bedbugs.length; i++) {
+						if(bedbugs[i] != null && bedbugs[i].id == $(theBug.target).parent().attr('id')) {
+							bedbugs[i].jquery.remove();
+							bedbugs.splice(i, 1);
+							setMessage('You killed the bedbug!', 'green');
+							increaseScore(BEDBUG_POINTS);
+							if(areDead(bedbugs)) {
+								setMessage();
+							}
+						}
+					}
+				}
+				else {
+					setMessage('You need the Splatter to kill bedbugs', 'red');
+				}
+			}
+		}
+		
+		
+		function setMessage(msg) {
+			setMessage(msg, 'black');
+		}
+		
+		function setMessage(msg, color) {
+			$("#message").html(msg).css('color', color);
+		}
+		
+		function getMessage() {
+			return $("#message").html();
+		}
+		
+		function clearMessage() {
+			$("#message").text("");
+		}
+	
+		function increaseScore(points) {
+			SCORE += points;
+			$("#score").text(SCORE);
+			if(SCORE > HIGHSCORE) {
+				setUserHighscore(SCORE, "You");
+				if(!alertedHighscore) {
+					setMessage($("#message").text() + "<br/>" + "You set a new HighScore!");
+					alertedHighscore = true;
+				}
+			}
+		}
+		
+		function setUserHighscore(score, user) {
+			HIGHSCORE = score;
+			HIGHSCORE_USER = user;
+			$("#highscore").text(user + " - " + score);
+		}
+		
+		function setHighScore(score) {
+			HIGHSCORE = score;
+			$("#highscore").text(score);
+		}
+		
+		function incrementTime() {
+			if( MIN >= 59) {
+				MIN = 0;
+				HOUR++;
+			}
+			else {
+				MIN++;
+			}
+			BONUS = (BONUS == 0 ? 0 : BONUS - 1);
+			if(HOUR > 23) {
+				$("#time").text(padTime(HOUR-24) + padTime(MIN));
+			}
+			else {
+				$("#time").text(padTime(HOUR) + padTime(MIN));
+			}
+			$("#bonus").text(BONUS);			
+		}
+		
+		function padTime(time) {
+			var s = "0" + time;
+			return s.substring(s.length-2, s.length);
+		}
+		
+		function areDead(enemy) {
+			if(enemy.length == 0) {
+				return true;
+			}
+			return false;
+		}
+		
+		/*
+		function moveToClick(e) {
+			var player = $("#player");
+			position[0] = e.pageX - player.width()/2;
+			position[1] = e.pageY - player.height()/2;
+			direction = [0,0];
+			
+		}
+		*/
+		
+		function handleKeypress(e) {	
+			// Change direction if one of the arrow keys was pressed
+			switch(e.which) {
+				case 37: // left
+				case 65: // 'a'
+					player.direction = LEFT;
+					break;
+				case 38: // up
+				case 87: // 'w'
+					player.direction = UP;
+					break;
+				case 39: // right
+				case 68: // 'd'
+					player.direction = RIGHT;
+					break;
+				case 40: // down DOWN;
+				case 83: // 's'
+					player.direction = DOWN;
+					break;
+				case 27: // ESC
+					$("#my_popup").click();
+					if(!gamePaused) {
+						pauseGame();
+					}
+					else {
+						resumeGame();
+					}
+					break;				
+				default:
+					return; // exit the handler
+			}
+			e.preventDefault();
+		}
+		
+		function pauseGame() {
+			// Do nothing until game un-paused
+			if(!gamePaused && !gameOver) {
+				gamePaused = true;
+				clearInterval(mainInterval);
+				clearInterval(timeInterval);
+				clearInterval(messageInterval);
+				setMessage('Game paused');
+				pauseInterval = setInterval(function () {}, 1000);
+			}
+		}
+		
+		function resumeGame() {
+			// Start mainLoop again only if it was stopped
+			if(gamePaused) {
+				gamePaused = false;
+				clearInterval(pauseInterval);
+				mainInterval = setInterval("mainLoop()", MAIN_INTERVAL);
+				timeInterval = setInterval("incrementTime()", TIME_INTERVAL);
+				messageInterval = setInterval("clearMessage()", MESSAGE_INTERVAL);
+				setMessage('Game resumed');
+			}
+		}
+
+		function addFooter() { 
+		
+		}	
+		
+		// Taken from http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
+		function extend(base, sub) {
+		  // Avoid instantiating the base class just to setup inheritance
+		  // See https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/create
+		  // for a polyfill
+		  // Also, do a recursive merge of two prototypes, so we don't overwrite 
+		  // the existing prototype, but still maintain the inheritance chain
+		  // Thanks to @ccnokes
+		  var origProto = sub.prototype;
+		  sub.prototype = Object.create(base.prototype);
+		  for (var key in origProto)  {
+			 sub.prototype[key] = origProto[key];
+		  }
+		  // Remember the constructor property was set wrong, let's fix it
+		  sub.prototype.constructor = sub;
+		  // In ECMAScript5+ (all modern browsers), you can make the constructor property
+		  // non-enumerable if you define it like this instead
+		  Object.defineProperty(sub.prototype, 'constructor', { 
+			enumerable: false, 
+			value: sub 
+		  });
+		}
+
+
+		function IdentifiableObject(left, top, width, height, id, src){
+			this.loc = [left, top];
+			this.size = [width, height];
+			this.id = id;
+			this.jquery = $("<div></div>");
+			
+			this.jquery.attr('id', id);
+			this.jquery.css('position', 'absolute');
+			this.jquery.css('width', width);
+			this.jquery.css('height', height);
+			this.jquery.css('left', left);
+			this.jquery.css('top', top);
+			//this.jquery.css('z-index', 1);
+			
+			GAME_AREA.append(this.jquery);
+			// Place object initially
+			this.jquery.css({left: this.left(), top: this.top()});
+			
+			
+			var img = $("<img/>");
+			img.attr('src', src);
+			img.css('width', width);
+			img.css('height', height);
+		///	img.css('z-index', 1);
+			this.jquery.append(img);
+		}
+		
+		IdentifiableObject.prototype = {
+			left:    function() { return this.loc[0]; },
+			right:   function() { return this.loc[0] + this.size[0]; },
+			top:     function() { return this.loc[1]; },
+			bottom:  function() { return this.loc[1] + this.size[1]; },
+			touches: function(obj) {
+				if (( this.left() <= obj.right() ) && ( this.right() >= obj.left() )) {
+					if(( this.top() <= obj.bottom() ) && ( this.bottom() >= obj.top() )) {
+						return true;
+					}
+				}
+				return false;
+			}
+			//touches: function(obj) {
+				/*			
+				if (( this.loc[0] <= obj.loc[0] + obj.size[0] ) && ( this.loc[0] + this.size[0] >= obj.loc[0] )) {
+					if(( this.loc[1] <= obj.loc[1] + obj.size[1] ) && ( this.loc[1] + this.size[1] >= obj.loc[1] )) {
+						return true;
+					}
+				}
+				return false;
+				*/
+				//return !( ( (this.loc[1] + this.size[1]) < (obj.loc[1]) ) || ( this.loc[1] > (obj.loc[1] + obj.size[1]) ) || ( (this.loc[0] + this.size[0]) < obj.loc[0] || (this.loc[0] > (obj.loc[0] + obj.size[0]) ) ));
+			//}
+		}
+		
+		function Item(left, top, id, src, name) {
+			IdentifiableObject.call(this, left, top, ITEM_WIDTH, ITEM_HEIGHT, id, src);
+			this.name = name;
+			
+			/*var img = $("<img/>");
+			img.attr('src', src);
+			img.css('width', ITEM_WIDTH);
+			img.css('height', ITEM_HEIGHT);
+			
+			this.jquery.append(img);*/
+		}
+		Item.prototype = {
+			test: function() { alert('test complete'); }
+		}
+		extend(IdentifiableObject, Item);
+		
+		function MovableObject(left, top, width, height, dx, dy, id, src) {
+			IdentifiableObject.call(this, left, top, width, height, id, src);
+			this.direction = [dx, dy];
+			this.onStairs = false;
+			/*var img = $("<img/>");
+			img.attr('src', src);
+			img.css('width', width);
+			img.css('height', height);
+		///	img.css('z-index', 1);
+			
+			this.jquery.append(img);*/
+		}
+		MovableObject.prototype = {
+			dx: function() { return this.direction[0]; },
+			dy: function() { return this.direction[1]; },
+			move: function() {
+				if(this.hitWall()) {
+					var currentDir = [this.dx(), this.dy()];
+					while(this.direction[0] == currentDir[0] && this.direction[1] == currentDir[1]) {
+						this.direction = DIRECTIONS[Math.floor(Math.random() * 4)];
+					}
+					//this.direction = DIRECTIONS[Math.floor(Math.random() * 4)];
+				}
+				else {
+					if(Math.floor(Math.random() * 100) <= 5) { 
+						this.direction = DIRECTIONS[Math.floor(Math.random() * 4)];
+					}
+					if (this.onStairs) {
+						if (!(this.touches(stair1) || this.touches(stair2))) {
+							this.onStairs = false;
+						}
+						this.loc[0] += this.dx();
+						this.loc[1] += this.dy();
+					}
+					else {
+						if (this.touches(stair1)) {
+							this.onStairs = true;
+							this.loc[0] = stair2.loc[0];
+							this.loc[1] = stair2.loc[1];
+						}
+						else if (this.touches(stair2)) {
+							this.onStairs = true;
+							this.loc[0] = stair1.loc[0];
+							this.loc[1] = stair1.loc[1];
+						}
+						else {
+							this.loc[0] += this.dx();
+							this.loc[1] += this.dy();
+						}
+					}
+					this.jquery.css({left: this.left(), top: this.top()});
+				}
+			},
+			hitWall: function() {							
+				if(this.left() + this.dx() < LEFT_WALL) {
+					return true;
+				}
+				if(this.right() + this.dx() > RIGHT_WALL) {
+					return true;
+				}
+				if(this.top() + this.dy() < TOP_WALL) {
+					return true;
+				}
+				if(this.bottom() + this.dy() > BOTTOM_WALL) {
+					return true;
+				}
+				return false;
+			}
+		}
+		
+		extend(IdentifiableObject, MovableObject);
+		
+		function Player(left, top, width, height, dx, dy, id) {
+			MovableObject.call(this, left, top, width, height, dx, dy, id, PLAYER_SRC);
+			this.taps = false;
+			//this.splatter = false;
+			this.items = [];
+		}
+		Player.prototype = {
+			pickUp: function(theItem) {
+				for(var i = 0; i < items.length; i++) {
+					if(items[i] == theItem) {
+						setMessage("Player picked up " + theItem.name + "!", "green");
+						this.items[this.items.length] = theItem.name;
+						items[i].jquery.remove();
+						items.splice(i, 1);
+					}
+				}
+			},
+			hasItem: function(itemName) {
+				for(var i = 0; i < this.items.length; i++) {
+					if(itemName == this.items[i]) {
+						return true;
+					}
+				}
+				return false;
+			},
+			move: function() {
+				// Going to touch wall
+				if(this.hitWall()) {
+					this.direction = [0,0];
+					//setMessage("You've hit the wall");
+				}
+				else {
+					// Currently inside staircase area
+					if (this.onStairs) {
+						if (!(this.touches(stair1) || this.touches(stair2))) {
+							this.onStairs = false;
+						}
+						// Can't leave deck after signing TAPS
+						if(this.taps) {
+							this.loc[0] += this.dx();
+							this.loc[1] += this.dy();
+						}
+						else {
+							this.loc[0] += this.dx();
+							this.loc[1] += this.dy();
+						}
+					}
+					else {
+						// Not inside staircase area
+						if (this.touches(stair1)) {
+							this.onStairs = true;
+							if (this.taps) {
+								setMessage("You can't leave deck, <br>that's an Honor Offense!", 'red');
+							}
+							else {
+								this.loc[0] = stair2.loc[0];
+								this.loc[1] = stair2.loc[1];
+							}
+						}
+						else if (this.touches(stair2)) {
+							this.onStairs = true;
+							if (this.taps) {
+								setMessage("You can't leave deck, <br>that's an Honor Offense!", 'red');
+							}
+							else {
+								this.loc[0] = stair1.loc[0];
+								this.loc[1] = stair1.loc[1];
+							}
+						}
+						else {
+							this.loc[0] += this.dx();
+							this.loc[1] += this.dy();
+						}
+					}
+					this.jquery.css({left: this.left(), top: this.top()});
+				}
+			}
+		}
+		extend(MovableObject, Player);
+		
+		function Mate(left, top, width, height, dx, dy, id) {
+			MovableObject.call(this, left, top, width, height, dx, dy, id, MATE_SRC);
+		}
+		
+		Mate.prototype = {
+			dx: function() { return this.direction[0]; },
+			dy: function() { return this.direction[1]; },
+			move: function() {
+				if(this.hitWall()) {
+					var currentDir = [this.dx(), this.dy()];
+					while(this.direction[0] == currentDir[0] && this.direction[1] == currentDir[1]) {
+						this.direction = DIRECTIONS[Math.floor(Math.random() * 4)];
+					}
+					//this.direction = DIRECTIONS[Math.floor(Math.random() * 4)];
+				}
+				else {
+					if(Math.floor(Math.random() * 100) <= .5) { 
+						this.direction = DIRECTIONS[Math.floor(Math.random() * 4)];
+					}
+					this.loc[0] += this.dx();
+					this.loc[1] += this.dy();
+					this.jquery.css({left: this.left(), top: this.top()});
+				}
+			}
+		}
+		extend(MovableObject, Mate);
+		
+		function BedBug(left, top, width, height, dx, dy, id) {
+			MovableObject.call(this, left, top, width, height, dx, dy, id, BEDBUG_SRC);
+			this.jquery.mousedown(removeBug);
+		}
+		/*
+		BedBug.prototype = {
+			move: function() {
+				setMessage('hi');
+			}
+		}
+		*/
+		extend(MovableObject, BedBug);
+
+	</script>
+</head>
+<!-- <body onload="init()">
+REMOVE COMMENT WHEN GAME IS DONE -->
+<body style="background-image:url(img/rack.jpg); background-color:white; background-repeat: no-repeat"> <!-- onload="init()" -->
+<div id="start_screen" style="background-color:white">
+<p>&nbsp;</p>
+<h1> RACK-MAN </h1>
+<h3> A tired Midshipman's endless struggle to get to bed </h3>
+<br/><br/>
+<button onclick="init()" autofocus>Start Game</button>
+<p>&nbsp;</p>
+
+
+
+</div>
+<!-- Add content to the popup - ->
+<div id="my_popup" class="well" style="max-width:44em;">
+
+
+<h4>GAME PAUSED</h4>
+<p>Try to change the width and height of browser window, or to rotate your device, and also try to navigate with the <kbd>Tab</kbd> key.</p>
+<p>You can close the dialog by pressing the <kbd>Esc</kbd> key, or by clicking on the background outside the content area, or by clicking on the Close button.</p>
+
+
+<!-- Add an optional button to close the popup -- >
+<button class="my_popup_close" onclick="resumeGame()">Resume</button>
+<br/><br/>
+
+</div><br/><br/>
+<script>
+	$(document).ready(function() {
+	  // Initialize the pause menu
+	  $('#my_popup').popup();
+
+	});
+</script>
+<!-- 
+<div id="highscore_div">HighScore: <span id="highscore"></span></div><br/>
+<div id="score_div">Score: <span id="score"></span></div><br/>
+<div id="time_div">Time of Day: <span id="time"></span></div><br/>
+<div id="bonus_div">Time Bonus Points remaining: <span id="bonus"></span></div><br/>
+
+<!-- Add an optional button to open the popup - ->
+<button class="my_popup_open" onclick="pauseGame()">Pause Game</button>
+
+<!-- Add content to the popup - ->
+<div id="my_popup" class="well" style="max-width:44em;">
+
+
+<h4>GAME PAUSED</h4>
+<p>Try to change the width and height of browser window, or to rotate your device, and also try to navigate with the <kbd>Tab</kbd> key.</p>
+<p>You can close the dialog by pressing the <kbd>Esc</kbd> key, or by clicking on the background outside the content area, or by clicking on the Close button.</p>
+
+
+<!-- Add an optional button to close the popup - ->
+<button class="my_popup_close" onclick="resumeGame()">Resume</button>
+<br/><br/>
+
+</div><br/><br/>
+<script>
+	$(document).ready(function() {
+	  // Initialize the pause menu
+	  $('#my_popup').popup();
+
+	});
+</script>
+
+<div id="message"></div>
+
+-->
+
+    <!-- ***************************************************************
+       Below this point is text you should include on every page
+       *************************************************************** -->
+	<div id='footer'>
+    <p><br/><br/> </p>
+    <hr/>
+    <div> If you experience any issues on the site or have suggestions to improve it, 
+	please <a href="mailto:m152196@usna.edu"> email the Webmaster</a>.
+    </div>
+    <p>
+       	<script type = "text/javascript">
+	 document.write('<a href="http://intranet.cs.usna.edu:8888/?doc='+document.location+'">' +
+        '<img src="http://www.w3.org/html/logo/img/mark-word-icon.png"'+
+		'alt="Valid HTML 5!" height="50" width="50" />'+
+      '</a>');
+	    </script>  
+      This page last modified 
+    <script type="text/javascript">
+      document.write(document.lastModified);
+    </script>
+  </p>
+  </div>
+  
+  
+  
+	
+</body>
+</html>
+  

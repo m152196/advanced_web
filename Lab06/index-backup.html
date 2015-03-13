@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<!--
+	Aaron Fleming
+	152196
+	Lab03
+	index.html
+-->
+
+<html>
+<head>
+	<meta charset="utf-8" />
+	<title>IWG Homepage</title>
+	<link rel="stylesheet" type="text/css" href="../styles.css" />
+	<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script> 
+	<script>
+	var xhrActive = false;
+	
+	/* 
+	 * Validates whether the value in the username input field is correct and available. If so,
+	 * it is highlighted in green. If not, it is highlighted in red. A status message is 
+	 * printed to give further feedback regarding the username entered.
+	 */
+	function validateUser() {
+		var uname = $("#uname");
+		var unameStatus = $("#unameStatus");
+		unameStatus.css("color", "grey")
+		unameStatus.text(" Checking availability of '" + uname.val() + "'...");
+		// Username must not be empty
+		if ('' == uname.val()) {
+			setRed(uname);
+			unameStatus.text("Username is required.");
+		}
+		else {
+			handleQuery('username'); // use AJAX to determine if taken or not
+		}
+	}
+	
+	/* 
+	 * Highlights username field and updates status appropriately depending on whether or not
+	 * the username entered has already been taken.
+	 */
+	function markUser(taken) {
+		var uname = $("#uname");
+		var unameStatus = $("#unameStatus");
+		if (taken) {
+			setRed(uname);
+			unameStatus.text(" Username '" + uname.val() + "' is taken.");
+		}
+		else {
+			setGreen(uname);
+			unameStatus.text(" Username '" + uname.val() + "' is available.");
+		}
+	}
+	
+	/* 
+	 * Highlights email field and updates status appropriately depending on whether or not
+	 * the email entered has already been seen.
+	 */
+	function markEmail(taken) {
+		var email = $("#email");
+		var emailStatus = $("#emailStatus");
+		if (taken) {
+			setRed(email);
+			emailStatus.text(" Email '" + email.val() + "' is already in use.");
+		}
+		else {
+			setGreen(email);
+			emailStatus.text("");
+		}
+	}
+	
+	/* Handles username and email validation queries. Asynchronously queries server to determine
+	 * availability and alter the input field and status accordingly. */ 
+	function handleQuery(type) {
+		if (xhrActive) {
+			return false; // ignore if busy already	
+		}
+		
+		var ajaxSettings = {
+			type: "GET",
+			error: function(xhr, status, error) { alert("error: " + error); }
+		}
+		
+		if (type == 'register') {
+			var uname = $("#uname").val();
+			var email = $("#email").val();
+			var fname = $("#fname").val();
+			var lname = $("#lname").val();
+			var co = $("#co").val();
+			ajaxSettings.url = "register.pl";
+			ajaxSettings.data = "uname="+uname+"&email="+email+"&fname="+fname+"&lname="+lname+"&co="+co;
+			ajaxSettings.success = function(resp) { xhrActive = false; }
+		}
+		else {
+			ajaxSettings.url = "roster.pl";
+			ajaxSettings.data = "format=default";
+			if (type == 'username') {
+				ajaxSettings.success = handleUsername;
+			}
+			else {
+				ajaxSettings.success = handleEmail;
+			}
+		}
+		
+		$.ajax(ajaxSettings);
+	
+		xhrActive = true;
+		return false; // false prevents from actually submitting
+	}
+	
+	/* 
+	 * Parses the user information returned from the server to determine whether or not
+	 * the entered username is already taken. Highlights the username field and updates
+	 * the username status appropriately.
+	 */
+	function handleUsername(resp) {
+		var jXML = $(resp);
+		var users = jXML.find("USER").get();
+		var uname = $("#uname").val();
+		var all_usernames = [];
+		// Appends all usernames from file to the array of usernames
+		for (var i = 0; i < users.length; i++) {
+			//                           username
+			all_usernames.push(users[i].children[0].innerHTML);
+		}
+		
+		// Check the array of usernames for the username input value
+		if (-1 == $.inArray(uname, all_usernames)) {
+			// username not taken
+			markUser(false);
+		}
+		else {
+			// username already taken
+			markUser(true);
+		}
+		// Asynchronous interaction with server complete
+		xhrActive = false;
+	}
+	
+	/* 
+	 * Parses the email information returned from the server to determine whether or not
+	 * the entered email is already in the system. Highlights the email field and updates
+	 * the email status appropriately.
+	 */
+	function handleEmail(resp) {
+		var jXML = $(resp);
+		var users = jXML.find("USER").get();
+		var email = $("#email").val();
+
+		var all_emails = [];
+		for (var i = 0; i < users.length; i++) {
+			//                          email
+			all_emails.push(users[i].children[1].innerHTML);
+		}
+		
+		// Check the array of usernames for the username input value
+		if (-1 == $.inArray(email, all_emails)) { 
+			// email not used before
+			markEmail(false);
+		}
+		else {
+			// email already used
+			markEmail(true);
+		}
+		xhrActive = false;
+	}
+	
+	/* 
+	 * Validates whether or not the value in the email input field is appropriate and available.
+	 * If the email matches the regex for an appropriate email, it is then checked against the
+	 * emails on the server to determine whether or not it is a duplicate.
+	 */
+	function validateEmail() {
+		var email = $("#email");
+		var emailStatus = $("#emailStatus");
+		emailStatus.css("color", "grey");
+		
+		// Basic regex for email address
+		var pattern = /\S+@\S+\.(com|edu|mil|org|net|gov|us|uk|info|biz|me)$/g
+		//alert(email.val());
+		if(email.val().match(pattern))
+		{
+			// Appropriate email, check if used already
+			handleQuery('email');
+		}
+		else {
+			// Not an appropriate email
+			setRed(email);
+			emailStatus.text("Invalid email entered.");
+		}
+	}
+	
+	/* Set the background color of the specified node to a specific shade of red. */
+	function setRed(jnode) {
+		jnode.css("background-color", "rgb(234, 97, 97)");
+	}
+	
+	/* Check if the background color node with the specified Id is the a specific shade of red.*/
+	function isRed(id) {
+		return $("#"+id).css("background-color")  == "rgb(234, 97, 97)";
+	}
+	
+	/* Set the background color of the specified node to a specific shade of green. */
+	function setGreen(jnode) {
+		jnode.css("background-color", "rgb(97, 234, 104)"); //"#61ea68";
+	}
+	
+	/* Check if the background color node with the specified Id is the a specific shade of green.*/
+	function isGreen(id) {
+		return $("#"+id).css("background-color") == "rgb(97, 234, 104)";
+	}
+
+	/* Set the background color of the specified node to white. */
+	function setWhite(jnode) {
+		jnode.css("background-color","rgb(255, 255, 255)"); //"white";
+	}
+	
+	/* 
+	 * Attempts to register the user with the information entered in the form. If the form contains
+	 * errors, a red error message is printed and the user is not registered. If no errors exist,
+	 * the user is "registered." Note: actual registration functionality has not yet been implemented.
+	 */
+	function register() {
+		window.alert('in register()');
+		// Variable to access the element in which to print status message
+		var submitStatus = $("#submitStatus");
+		// Check if all input field values are correct
+		if (allCorrect()) {
+			alert('all correct');
+			handleQuery('register');
+			
+			submitStatus.html("<br/> Thank you filling in your information. Your registration has been completed.");
+			// Reset form for next potential submission
+			resetAll();
+		}
+		else {
+			submitStatus.html("<p>One or more of the fields is missing or incorrect. Please correctly fill in any fields that are highlighted in red and try again.</p>");
+			submitStatus.css("color", "red");
+		}
+	}
+	
+	/* 
+	 * Checks all input fields for a green background color, which signifies correctness. If all
+	 * fields have a green background color, true is returned. False is returned otherwise.
+	 */
+	function allCorrect() {
+		var goodUname = isGreen("uname");
+		var goodEmail = isGreen("email");
+		var goodFname = isGreen("fname");
+		var goodLname = isGreen("lname");
+		var allGood = true;
+		
+		if (!goodUname) {
+			setRed($("#uname"));
+			allGood = false;
+		}
+		if (!goodEmail) {
+			setRed($("#email"));
+			allGood = false;
+		}
+		if (!goodFname) {
+			setRed($("#fname"));
+			allGood = false;
+		}
+		if (!goodLname) {
+			setRed($("#lname"));
+			allGood = false;
+		}
+		
+		if (allGood) {
+			return true;
+		}
+		else {
+			return false;
+		}
+	}
+	
+	/* Reset all input and status fields in the Registration form. */
+	function resetAll() {
+		resetInput("uname");
+		resetStatus("unameStatus");
+		resetInput("email");
+		resetStatus("emailStatus");
+		resetInput("fname");
+		resetStatus("fnameStatus");
+		resetInput("lname");
+		resetStatus("lnameStatus");
+		$("#co").val(1);
+	}
+	
+	/* Reset the input field with the specified Id. */
+	function resetInput(inputId) {
+		var input = $("#"+inputId);
+		input.val("");
+		input.css("background-color", "white");
+		input.css("color", "black");
+	}
+		
+	/* Reset the status field with the specified Id. */
+	function resetStatus(statusId) {
+		var status = $("#"+statusId);
+		status.text("");
+		status.css("color", "grey");
+	}
+	
+	/* Remove all child nodes from the specified parent node. */
+	function removeChildren(parent) {
+		while (parent.children.length > 0) {
+			parent.removeChild(parent.children[0]);
+		}
+	}
+	
+	/* 
+	 * Synchronous call to server to retrieve and print the current IWG members in the specified format. 
+	 * Format may be 'default', 'lname', or 'username'. Order may be 'none','ASC', or 'DESC'.
+	 */
+	function showMembers(format, order) {
+		/*
+		var ajaxSettings = {
+			type: "GET",
+			url: "roster.pl?",
+			data: 
+			error: function(xhr, status, error) { alert("error: " + error ); }
+		}*/
+		
+		xhr = window.ActiveXObject
+			? new ActiveXObject("Microsoft.XMLHTTP")
+			: new XMLHttpRequest();
+		
+		alert('format = ' + format + ', order = ' + order);
+		
+		// Get members from server in specified format and order
+		xhr.open("GET", "roster.pl?format=" + format +"&order=" + order, false); // synchronous
+		xhr.send(null);
+		
+		if (xhr.status != 200) {
+			alert("Error contacting server! Status: " + xhr.status);
+		}
+		else {
+		//var jXML = $(resp);
+		
+		
+			var root = xhr.responseXML.documentElement; // returns XML DOM root element
+			var users = root.children;
+			var list = document.getElementById("members");
+			
+			// Reset the current list so that it is not duplicated
+			removeChildren(list); // the users listed
+			
+			
+			// Create a new <li> element for each user's information from the 
+			//  XML file and append it to the list of members (<ul> element)
+			for (var i = 0; i < users.length; i++) {
+				var data = users[i].children;
+				var newLI = document.createElement("li");
+				//                     fname                     lname                     username
+				newLI.innerHTML = data[2].innerHTML + " " + data[3].innerHTML + " : " + data[0].innerHTML;
+				list.appendChild(newLI);
+			}
+		}
+	}
+	
+	/* 
+	 * Makes visible the buttons for ordering the users by last name and username. If the buttons
+	 * are already present, they are removed before being re-added. This prevents duplicate
+	 * buttons from being shown.
+	 */
+	function showButtons() {
+		var buttons = document.getElementById("buttons");
+		
+		// Remove previous buttons so they are not duplicated
+		removeChildren(buttons);
+		
+		// Create instruction text
+		var text = document.createElement("p");
+		text.innerHTML="Order the members by:";
+		var byLname = document.createElement("span");
+		byLname.innerHTML="Last name:&nbsp;";
+		var byUname = document.createElement("span");
+		byUname.innerHTML="&nbsp; Username:";
+		
+		// Create new buttons
+		var button1 = document.createElement("button");
+		var button2 = document.createElement("button");
+		var button3 = document.createElement("button");
+		var button4 = document.createElement("button");
+		
+		// Write button text
+		button1.innerHTML="Ascending";
+		button2.innerHTML="Descending";
+		button3.innerHTML="Ascending";
+		button4.innerHTML="Descending";
+	
+		// Set button onclick behavior to corresponding functions
+		button1.onclick=orderLnameAscending;
+		button2.onclick=orderLnameDescending;
+		button3.onclick=orderUnameAscending;
+		button4.onclick=orderUnameDescending;
+		
+		// Add elements to button list
+		buttons.appendChild(text);
+		buttons.appendChild(byLname);
+		buttons.appendChild(button1);
+		buttons.appendChild(button2);
+		buttons.appendChild(byUname);
+		buttons.appendChild(button3);
+		buttons.appendChild(button4);
+	}
+	
+	/* Makes the ordering buttons visible and retrieves current members in the default order. */
+	function showButtonsAndMembers() {
+		showButtons();
+		showMembers("default", "none");
+	}
+	
+	/* 
+	 * Makes the ordering buttons visible and retrieves current members ordered by lname in 
+	 * ascending order. 
+	 */
+	function orderLnameAscending() {
+		showMembers("lname", "ASC");
+	}
+	
+	/* 
+	 * Makes the ordering buttons visible and retrieves current members ordered by lname in
+	 * descending order.
+	 */
+	function orderLnameDescending() {
+		showMembers("lname", "DESC");
+	}
+	
+	/* 
+	 * Makes the ordering buttons visible and retrieves current members ordered by username
+	 * in ascending order. 
+	 */
+	function orderUnameAscending() {
+		showMembers("username", "ASC");
+	}
+	
+	/* 
+	 * Makes the ordering buttons visible and retrieves current members ordered by username
+	 * in descending order.
+	 */
+	function orderUnameDescending() {
+		showMembers("username", "DESC");
+	}
+	
+	/* 
+	 * Checks that input has been entered into the specified node. If so, it is highlighted 
+	 * green. If not, it is highlighted red.
+	 */
+	function checkInput(jnode) {
+		if (jnode.val() != '') {
+			setGreen(jnode);
+		}
+		else {
+			setRed(jnode);
+		}
+	}
+	</script>
+</head>
+
+<body>
+    <img src="IWG.png" alt="Information Warfare Group logo">
+    <h1> Welcome to the Information Warfare Group!  </h1>
+    <h2><i>"The <u>Premier</u> Cyber Club on the Yard."</i></h2>
+
+    <br>
+    <p>
+	Here in the IWG we are dedicated to developing the Navy's future Cyber Warriors.
+	This site is just one of the many resources available to our members for honing their
+	cyber skills and learning new techniques and tricks.
+	Be sure to check back for future training days and competitions.
+    </p>
+	<h2> Become a Member</h2>
+	<form method="get" action="dummy" onsubmit="return false;" autocomplete="off">
+		Username:
+		<input type="text" name="username" id="uname" onblur="validateUser()" onkeyup="validateUser()"><span id="unameStatus"></span>
+		<br/>
+		Email:
+		<input type="text" name="email" id="email" onblur="validateEmail()" onkeyup="validateEmail()"><span id="emailStatus"></span>
+		<br/>
+		First Name:
+		<input type="text" name="fname" id="fname" onkeyup="checkInput($(this))" onblur="checkInput($(this))"><span id="fnameStatus"></span>
+		<br/>
+		Last Name:
+		<input type="text" name="lname" id="lname" onkeyup="checkInput($(this))" onblur="checkInput($(this))"><span id="lnameStatus"></span>
+		<br/>
+		Company:
+		<select name="company" id="co">
+			<option value="1">1</option>
+			<option value="2">2</option>
+			<option value="3">3</option>
+			<option value="4">4</option>
+			<option value="5">5</option>
+			<option value="6">6</option>
+			<option value="7">7</option>
+			<option value="8">8</option>
+			<option value="9">9</option>
+			<option value="10">10</option>
+			<option value="11">11</option>
+			<option value="12">12</option>
+			<option value="13">13</option>
+			<option value="14">14</option>
+			<option value="15">15</option>
+			<option value="16">16</option>
+			<option value="17">17</option>
+			<option value="18">18</option>
+			<option value="19">19</option>
+			<option value="20">20</option>
+			<option value="21">21</option>
+			<option value="22">22</option>
+			<option value="23">23</option>
+			<option value="24">24</option>
+			<option value="25">25</option>
+			<option value="26">26</option>
+			<option value="27">27</option>
+			<option value="28">28</option>
+			<option value="29">29</option>
+			<option value="30">30</option>
+		</select>
+		<br/><br/>
+		<input type="submit" value="Register" onclick="register()">
+	</form>
+	<div id="submitStatus"></div>
+	<br/>
+	<button onclick="showButtonsAndMembers()">List Current Members</button>
+	<div id="buttons"></div>
+	<div id="listMembers">
+	<ul id="members">
+	</ul>
+	</div>
+
+    <br>
+    <h3><u> Training </u></h3>
+    <p><a href="DOM.html">Document Object Model Manipulation</a>: become familiar with the capabilities of the
+	Document Object Model as you play around with this interactive webpage. You are given a list of actions that
+	you can use to modify a table, initially containing nine elements.If you are at all familiar with html, you 
+	can probably find how to modify more than just the table.</p>
+	
+
+
+    <!-- ***************************************************************
+       Below this point is text you should include on every page
+       *************************************************************** -->
+	<div id='footer'>
+    <p><br/><br/> </p>
+    <hr/>
+    <div> If you experience any issues on the site or have suggestions to improve it, 
+	please <a href="mailto:m152196@usna.edu"> email the Webmaster</a>.
+    </div>
+    <p>
+       	<script type = "text/javascript">
+	 document.write('<a href="http://intranet.cs.usna.edu:8888/?doc='+document.location+'">' +
+        '<img src="http://www.w3.org/html/logo/img/mark-word-icon.png"'+
+		'alt="Valid HTML 5!" height="50" width="50" />'+
+      '</a>');
+	    </script>  
+      This page last modified 
+    <script type="text/javascript">
+      document.write(document.lastModified);
+    </script>
+  </p>
+  </div>
+
+
+</body>
+
+</html>
+  

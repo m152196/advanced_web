@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<!--
+	Aaron Fleming
+	152196
+	Lab02
+-->
+
+<html>
+<head>
+	<meta charset="utf-8" />
+	<title>IWG Homepage</title>
+	<link rel="stylesheet" type="text/css" href="styles.css" />
+	<script>
+	var xhrActive = false;
+	
+	/* 
+	 * Validates whether the value in the username input field is correct and available. If so,
+	 * it is highlighted in green. If not, it is highlighted in red. A status message is 
+	 * printed to give further feedback regarding the username entered.
+	 */
+	function validateUser() {
+		var uname = document.getElementById("uname");
+		var unameStatus = document.getElementById("unameStatus");
+		unameStatus.style.color="grey";
+		unameStatus.innerHTML=" Checking availability of '" + uname.value + "'...";
+		setGrey(uname);
+		// Username must not be empty
+		if ('' == uname.value){
+			setRed(uname);
+			unameStatus.innerHTML=" Username is required.";
+		}
+		else {
+			handleQuery('username'); // use AJAX to determine if taken or not
+		}
+	}
+	
+	/* 
+	 * Highlights username field and updates status appropriately depending on whether or not
+	 * the username entered has already been taken.
+	 */
+	function markUser(taken) {
+		var uname = document.getElementById("uname");
+		var unameStatus = document.getElementById("unameStatus");
+		if (taken) {
+			setRed(uname);
+			unameStatus.innerHTML=" Username '" + uname.value + "' is taken.";
+		}
+		else {
+			setGreen(uname);
+			unameStatus.innerHTML=" Username '" + uname.value + "' is available.";
+		}
+	}
+	
+	/* 
+	 * Highlights email field and updates status appropriately depending on whether or not
+	 * the email entered has already been seen.
+	 */
+	function markEmail(taken) {
+		var email = document.getElementById("email");
+		var emailStatus = document.getElementById("emailStatus");
+		if (taken) {
+			setRed(email);
+			emailStatus.innerHTML=" Email '" + email.value + "' is already in use.";
+		}
+		else {
+			setGreen(email);
+			emailStatus.innerHTML="";
+		}
+	}
+	
+	/* Handles username and email validation queries. Asynchronously queries server to determine
+	 * availability and alter the input field and status accordingly. */ 
+	function handleQuery(type) {
+		if (xhrActive) {
+			alert("Still busy, be patient!");
+			return false; // ignore if busy already	
+		}
+		
+		xhr = window.ActiveXObject
+			? new ActiveXObject("Microsoft.XMLHTTP")
+			: new XMLHttpRequest();
+			
+		// Get members from "server"
+		
+		xhr.open("GET", "user_list.xml", true); // asynchronous
+		if (type == 'username') {
+			xhr.onreadystatechange=handleUsername;
+		}
+		else { // type == 'email'
+			xhr.onreadystatechange=handleEmail;
+		}
+		xhr.send(null); // 'GET' request, so no data is sent
+		
+		xhrActive = true;
+		return false; // false prevents from actually submitting
+	}
+	
+	/* 
+	 * Parses the user information returned from the server to determine whether or not
+	 * the entered username is already taken. Highlights the username field and updates
+	 * the username status appropriately.
+	 */
+	function handleUsername() {
+		if (xhr.readyState != 4) { // not finished yet
+			return;
+		}
+		
+		// Deal with results
+		if (xhr.status != 200) {
+			alert("Error contacting server! Status: " + xhr.status);
+		}
+		else {
+			var root = xhr.responseXML.documentElement; // returns XML DOM root element
+			var users = root.children;
+			var uname = document.getElementById("uname");
+			
+			var all_usernames = [];
+			// Appends all usernames from file to the array of usernames
+			for (var i = 0; i < users.length; i++) {
+				//                           username
+				all_usernames.push(users[i].children[0].innerHTML);
+			}
+			
+			// Check the array of usernames for the username input value
+			if (-1 == all_usernames.indexOf(uname.value)) { 
+				// username not taken
+				markUser(false);
+			}
+			else {
+				// username already taken
+				markUser(true);
+			}
+			// Asynchronous interaction with server complete
+			xhrActive = false;
+		}
+	}
+	
+	/* 
+	 * Parses the email information returned from the server to determine whether or not
+	 * the entered email is already in the system. Highlights the email field and updates
+	 * the email status appropriately.
+	 */
+	function handleEmail() {
+		if (xhr.readyState != 4) { // not finished yet
+			return;
+		}
+		
+		// Deal with results
+		if (xhr.status != 200) {
+			alert("Error contacting server! Status: " + xhr.status);
+		}
+		else {
+			var root = xhr.responseXML.documentElement; // returns DOM root element
+			var users = root.children;
+			var email = document.getElementById("email");
+
+			var all_emails = [];
+			for (var i = 0; i < users.length; i++) {
+				//                          email
+				all_emails.push(users[i].children[1].innerHTML);
+			}
+			
+			// Check the array of usernames for the username input value
+			if (-1 == all_emails.indexOf(email.value)) { 
+				// email not used before
+				markEmail(false);
+			}
+			else {
+				// email already used
+				markEmail(true);
+			}
+			xhrActive = false;
+		}
+	}
+	
+	/* 
+	 * Validates whether or not the value in the email input field is appropriate and available.
+	 * If the email matches the regex for an appropriate email, it is then checked against the
+	 * emails on the server to determine whether or not it is a duplicate.
+	 */
+	function validateEmail() {
+		var email = document.getElementById("email");
+		var emailStatus = document.getElementById("emailStatus");
+		emailStatus.style.color="grey";
+		
+		// Basic regex for email address
+		var pattern = /\S+@\S+.(com|edu|mil|org|net|gov|us|uk|info|biz|me)/g
+		
+		if(email.value.match(pattern))
+		{
+			// Appropriate email, check if used already
+			handleQuery('email');
+		}
+		else {
+			// Not an appropriate email
+			setRed(email);
+			emailStatus.innerHTML="Invalid email entered.";
+		}
+	}
+	
+	/* Set the background color of the specified node to a specific shade of red. */
+	function setRed(node) {
+		node.style.backgroundColor="rgb(234, 97, 97)"; //"#ea6161";
+	}
+	
+	/* Check if the background color node with the specified Id is the a specific shade of red.*/
+	function isRed(id) {
+		return document.getElementById(id).style.backgroundColor == "rgb(234, 97, 97)";
+	}
+	
+	/* Set the background color of the specified node to a specific shade of green. */
+	function setGreen(node) {
+		node.style.backgroundColor="rgb(97, 234, 104)"; //"#61ea68";
+	}
+	
+	/* Check if the background color node with the specified Id is the a specific shade of green.*/
+	function isGreen(id) {
+		return document.getElementById(id).style.backgroundColor == "rgb(97, 234, 104)";
+	}
+	
+	/* Set the background color of the specified node to grey. */
+	function setGrey(node) {
+		node.style.backgroundColor="rgb(128, 128, 128)"; //"grey";
+	}
+	
+	/* Check if the background color node with the specified Id is grey.*/
+	function isGrey(id) {
+		return document.getElementById(id).style.backgroundColor == "rgb(128, 128, 128)";
+	}
+	
+	/* Set the background color of the specified node to white. */
+	function setWhite(node) {
+		node.style.backgroundColor="rgb(255, 255, 255)"; //"white";
+	}
+	
+	/* 
+	 * Attempts to register the user with the information entered in the form. If the form contains
+	 * errors, a red error message is printed and the user is not registered. If no errors exist,
+	 * the user is "registered." Note: actual registration functionality has not yet been implemented.
+	 */
+	function register() {
+		var submitStatus = document.getElementById("submitStatus");
+		// Check if all input field values are correct
+		if (allCorrect()) {
+			submitStatus.style.color="black";
+			submitStatus.innerHTML="<br/>Thank you for spending your time to fill in your information. Actual registration functionality will be implemented in future builds of the site.";
+			// Reset form for next potential submission
+			resetAll();
+		}
+		else {
+			submitStatus.innerHTML="<br/>One or more of the fields is missing or incorrect. Please correctly fill in any fields that are highlighted in red and try again.";
+			submitStatus.style.color="red";
+		}
+	}
+	
+	/* 
+	 * Checks all input fields for a green background color, which signifies correctness. If all
+	 * fields have a green background color, true is returned. False is returned otherwise.
+	 */
+	function allCorrect() {
+		var goodUname = isGreen("uname");
+		var goodEmail = isGreen("email");
+		var goodFname = isGreen("fname");
+		var goodLname = isGreen("lname");
+		var allGood = true;
+		
+		if (!goodUname) {
+			setRed(document.getElementById("uname"));
+			allGood = false;
+		}
+		if (!goodEmail) {
+			setRed(document.getElementById("email"));
+			allGood = false;
+		}
+		if (!goodFname) {
+			setRed(document.getElementById("fname"));
+			allGood = false;
+		}
+		if (!goodLname) {
+			setRed(document.getElementById("lname"));
+			allGood = false;
+		}
+		
+		if (allGood) {
+			return true;
+		}
+		else {
+			return false;
+		}
+	}
+	
+	/* Reset all input and status fields in the Registration form. */
+	function resetAll() {
+		resetInput("uname");
+		resetStatus("unameStatus");
+		resetInput("email");
+		resetStatus("emailStatus");
+		resetInput("fname");
+		resetStatus("fnameStatus");
+		resetInput("lname");
+		resetStatus("lnameStatus");
+		document.getElementById("co").value=1;
+	}
+	
+	/* Reset the input field with the specified Id. */
+	function resetInput(inputId) {
+		var input = document.getElementById(inputId);
+		input.value=""
+		input.style.backgroundColor="white";
+		input.style.color="black";
+	}
+		
+	/* Reset the status field with the specified Id. */
+	function resetStatus(statusId) {
+		var status = document.getElementById(statusId);
+		status.innerHTML="";
+		status.style.color="grey";
+	}
+	
+	/* Remove all child nodes from the specified parent node. */
+	function removeChildren(parent) {
+		while (parent.children.length > 0) {
+			parent.removeChild(parent.children[0]);
+		}
+	}
+	
+	/* Synchronous call to server to retrieve and print the current IWG members. */
+	function listMembers() {
+		xhr = window.ActiveXObject
+			? new ActiveXObject("Microsoft.XMLHTTP")
+			: new XMLHttpRequest();
+		
+		// Get members from "server"
+		xhr.open("GET", "user_list.xml", false); // synchronous
+		xhr.send(null);
+		
+		if (xhr.status != 200) {
+			alert("Error contacting server! Status: " + xhr.status);
+		}
+		else {
+			var root = xhr.responseXML.documentElement; // returns XML DOM root element
+			var users = root.children;
+			var list = document.getElementById("members");
+			
+			// Reset the current list so that it is not duplicated
+			removeChildren(list);
+			// Create a new <li> element for each user's information from the 
+			//  XML file and append it to the list of members (<ul> element)
+			for (var i = 0; i < users.length; i++) {
+				var data = users[i].children;
+				var newLI = document.createElement("li");
+				//                     fname                     lname                     username
+				newLI.innerHTML = data[2].innerHTML + " " + data[3].innerHTML + " : " + data[0].innerHTML;
+				list.appendChild(newLI);
+			}
+		}
+	}
+	
+	/* 
+	 * Checks that input has been entered into the specified node. If so, it is highlighted 
+	 * green. If not, it is highlighted red.
+	 */
+	function checkInput(node) {
+		if (node.value != '') {
+			setGreen(node);
+		}
+		else {
+			setRed(node);
+		}
+	}
+	</script>
+</head>
+
+<body>
+    <img src="IWG.png" alt="Information Warfare Group logo">
+    <h1> Welcome to the Information Warfare Group!  </h1>
+    <h2><i>"The <u>Premier</u> Cyber Club on the Yard."</i></h2>
+
+    <br>
+    <p>
+	Here in the IWG we are dedicated to developing the Navy's future Cyber Warriors.
+	This site is just one of the many resources available to our members for honing their
+	cyber skills and learning new techniques and tricks.
+	Be sure to check back for future training days and competitions.
+    </p>
+	<h2> Become a Member</h2>
+	<form method="get" action="dummy" onsubmit="return false;" autocomplete="off">
+		Username:
+		<input type="text" name="username" id="uname" onblur="validateUser()" onkeyup="validateUser()"><span id="unameStatus"></span>
+		<br/>
+		Email:
+		<input type="text" name="email" id="email" onblur="validateEmail()" onkeyup="validateEmail()"><span id="emailStatus"></span>
+		<br/>
+		First Name:
+		<input type="text" name="fname" id="fname" onkeyup="checkInput(this)"><span id="fnameStatus"></span>
+		<br/>
+		Last Name:
+		<input type="text" name="lname" id="lname" onkeyup="checkInput(this)"><span id="lnameStatus"></span>
+		<br/>
+		Company:
+		<select name="company" id="co">
+			<option value="1">1</option>
+			<option value="2">2</option>
+			<option value="3">3</option>
+			<option value="4">4</option>
+			<option value="5">5</option>
+			<option value="6">6</option>
+			<option value="7">7</option>
+			<option value="8">8</option>
+			<option value="9">9</option>
+			<option value="10">10</option>
+			<option value="11">11</option>
+			<option value="12">12</option>
+			<option value="13">13</option>
+			<option value="14">14</option>
+			<option value="15">15</option>
+			<option value="16">16</option>
+			<option value="17">17</option>
+			<option value="18">18</option>
+			<option value="19">19</option>
+			<option value="20">20</option>
+			<option value="21">21</option>
+			<option value="22">22</option>
+			<option value="23">23</option>
+			<option value="24">24</option>
+			<option value="25">25</option>
+			<option value="26">26</option>
+			<option value="27">27</option>
+			<option value="28">28</option>
+			<option value="29">29</option>
+			<option value="30">30</option>
+		</select>
+		<br/><br/>
+		<input type="submit" value="Register" onclick="register()">
+	</form>
+	<div id="submitStatus"></div>
+	<br/>
+	<button onclick="listMembers()">List Current Members</button>
+	<div id="listMembers">
+	<ul id="members">
+	</ul>
+	</div>
+
+    <br>
+    <h3><u> Training </u></h3>
+    <p><a href="DOM.html">Document Object Model Manipulation</a>: become familiar with the capabilities of the
+	Document Object Model as you play around with this interactive webpage. You are given a list of actions that
+	you can use to modify a table, initially containing nine elements.If you are at all familiar with html, you 
+	can probably find how to modify more than just the table.</p>
+	
+
+
+    <!-- ***************************************************************
+       Below this point is text you should include on every page
+       *************************************************************** -->
+	<div id='footer'>
+    <p><br/><br/> </p>
+    <hr/>
+    <div> If you experience any issues on the site or have suggestions to improve it, 
+	please <a href="mailto:m152196@usna.edu"> email the Webmaster</a>.
+    </div>
+    <p>
+       	<script type = "text/javascript">
+	 document.write('<a href="http://intranet.cs.usna.edu:8888/?doc='+document.location+'">' +
+        '<img src="http://www.w3.org/html/logo/img/mark-word-icon.png"'+
+		'alt="Valid HTML 5!" height="50" width="50" />'+
+      '</a>');
+	    </script>  
+      This page last modified 
+    <script type="text/javascript">
+      document.write(document.lastModified);
+    </script>
+  </p>
+  </div>
+
+
+</body>
+
+</html>
+  

@@ -1,0 +1,62 @@
+/*
+	Aaron Fleming
+	152196
+	Lab02
+*/
+body {
+	background-color:turquoise;
+	text-align:center;
+	font-family:"Lucida Console";
+}
+
+table {
+	border: 1px solid black;
+	background-color:white;
+}
+
+table.center {
+	margin-left:auto;
+	margin-right:auto;
+	/* http://www.granneman.com/webdev/coding/css/centertables/ */
+}
+
+#actions, #listMembers {
+	text-align:left;
+	width:100%;
+	margin-left:40%;
+	margin-right:auto;
+}
+
+#actions h4 {
+	margin-left:7%;
+	text-decoration:underline;
+}
+
+li {
+	text-align:left;
+}
+
+#actions li span:hover {
+    cursor:pointer;
+    color:blue;
+	background-color:white;
+	text-decoration:underline;
+}
+
+#mode, td {
+	text-align:center;
+}
+
+td {
+	background-color:white;
+	border: 1px solid black;
+	cursor:default;
+}
+
+#footer {
+	font-family:times;
+}
+
+#invalidUser {
+	color:grey;
+}

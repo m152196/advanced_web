@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<!--
+	Aaron Fleming
+	152196
+	Lab05
+	index.html
+-->
+
+<html>
+<head>
+	<meta charset="utf-8" />
+	<title>RACK-MAN</title>
+	<!-- Bootstrap -->
+    <link href="bootstrap/css/bootstrap.min.css" rel="stylesheet">
+	<style>
+		.top-buffer {
+			padding-top:20px;
+		}
+	</style>
+	
+	<!-- Include jQuery -->
+	<script type="text/javascript" src="jquery.min.js"></script>
+	
+	<!-- Include jQuery Popup Overlay -->
+	<script src="http://vast-engineering.github.io/jquery-popup-overlay/jquery.popupoverlay.js"></script>
+	<script type="text/javascript">
+		
+		// Define the speed and possible directions
+		const VELOCITY = 1;
+		const LEFT = [-VELOCITY,0];
+		const RIGHT = [VELOCITY,0];
+		const UP = [0,-VELOCITY];
+		const DOWN = [0,VELOCITY];
+		const DIRECTIONS = [LEFT, UP, RIGHT, DOWN];
+		
+		// Dimensions of the game area
+		const HEIGHT = 700;
+		const WIDTH = 900;
+		const LEFT_WALL = 0;
+		const RIGHT_WALL = WIDTH;
+		const TOP_WALL = 0;
+		const BOTTOM_WALL = HEIGHT;
+		
+		// Dimensions and image sources for all IdentifiableObjects in the game
+		const PLAYER_HEIGHT = 60;
+		const PLAYER_WIDTH = 25;
+		const PLAYER_SRC = "img/figure_backgroundless.png";
+		
+		const BEDBUG_HEIGHT = 28;
+		const BEDBUG_WIDTH = 25;
+		const BEDBUG_SRC = "img/bedbug2_backgroundless.png";
+		const NUM_BEDBUGS = 18;
+		const BEDBUG_POINTS = 250;
+		
+		const ITEM_HEIGHT =40;
+		const ITEM_WIDTH = 40;
+		const SPLATTER_SRC = "img/splatter.png";
+		
+		const RACK_SRC = "img/bed2.png";
+		const RACK_HEIGHT = 75;
+		const RACK_WIDTH = 65;
+		
+		const MATE_SRC = "img/mate.png";
+		const MATE_HEIGHT = PLAYER_HEIGHT + PLAYER_HEIGHT/3;
+		const MATE_WIDTH = PLAYER_WIDTH + (1.5 * PLAYER_WIDTH);
+		
+		const STAIR_HEIGHT = 85;
+		const STAIR_WIDTH = 60;
+		const LEFT_STAIR_SRC = "img/left_staircase.png";
+		const RIGHT_STAIR_SRC = "img/right_staircase.png";
+		
+		const MAIN_INTERVAL = 10;		// mainLoop() interval in milliseconds
+		const MESSAGE_INTERVAL = 6500;	// Show messages for 6.5 seconds
+		
+		const TIME_INTERVAL = 300;		// Time increases by 1 min every 300 ms
+		const BOARD_COLOR = '#00CC66';
+		
+		// start time 10:00pm
+		var HOUR = 22;
+		var MIN = 0;
+		
+		// Possible bonus points
+		var BONUS = 1000
+		var SCORE = 0;
+		// Database will be queried for highscore
+		var HIGHSCORE;
+		var HIGHSCORE_HOLDER;
+		
+		// Boolean values
+		var alertedHighscore;
+		var alertedTaps;
+		var gamePaused;
+		var gameOver;
+		
+		// Objects to allow the various intervals to be paused and restarted
+		var pauseInterval;
+		var mainInterval;
+		var timeInterval;
+		var messageInterval;
+		
+		// Declare all of the IdentifiableObjects
+		var player;
+		var stair1;
+		var stair2;
+		var bedbugs = [];
+		var items = [];
+		var rack;
+		var mate;
+					
+		// Declare the game board
+		var GAME_AREA;
+		
+		/*
+		 * Initialization function called when the user clicks the "Start Game" button.
+		 * Clears the image and instructions from the main page, and sets up the game
+		 * area, scoring area, and message area.
+		 */
+		function init() {
+			// Clear the page
+			var body = $("body");
+			
+			// Remove background image
+			body.css('background-color', '#ffffff');
+			body.css('background-image', 'none');
+			$("#start_screen").remove();
+			body.css({backgroundImage: "none", backgroundColor: "white"});
+			
+			var wrapper = $("<div class='container-fluid'></div>");
+			var header = $("<h1>RACK-MAN </h1>");
+			var row = $("<div class='row'></div");
+			var column1 = $("<div id='column1' class='col-md-8'></div>");
+			var column2 = $("<div id='column2' class='col-md-3' style='text-align:center'></div>");
+			
+			GAME_AREA = $("<div id='GAME_AREA' class='game' ></div>");
+			GAME_AREA.css({position: "absolute", height:HEIGHT, width:WIDTH, backgroundColor:BOARD_COLOR, margin:"0 auto"});
+			column1.prepend(GAME_AREA);
+			
+			// Initialize scoring area and message area
+			column2.append('<h4>High Score: <span id="highscore"></span></h4><br/>');
+			column2.append('<h4>Score: <span id="score"></span></h4><br/>');
+			column2.append('<h4>Time of Day: <span id="time"></span></h4><br/>');
+			column2.append('<h4>Time Bonus Points remaining: <span id="bonus"></span></h4><br/>');
+			column2.append('<button id="pause_button" class="my_popup_open btn btn-danger" onclick="pauseGame()">Pause Game</button><div></div>');
+			
+			var popup = $('<div id="my_popup" class="well" style="max-width:44em;"></div>');
+			popup.append('<h4>GAME PAUSED</h4>');
+			popup.append('<p>You have paused the game. Click the <kbd>Resume</kbd> button or press <kbd>ESC</kbd> to continue.</p>');
+			popup.append('<button id="resume_button" class="my_popup_close btn btn-success" onclick="resumeGame()">Resume</button><br/><br/>');
+			column2.append('<br/>\n<div id="message"></div>');
+			row.append(column1);
+			row.append(column2);
+			wrapper.append(header);
+			wrapper.append(row);
+			body.prepend(wrapper);
+			body.prepend(popup);
+			
+			// Display initial time and score values
+			retrieveHighscore();
+			increaseScore(0);
+			$("#time").text(padTime(HOUR) + padTime(MIN));
+			$("#bonus").text(BONUS);
+			
+			// Initialize the pause menu
+			$('#my_popup').popup();
+			
+			// Set the page to register key presses
+			$(document).keydown(handleKeypress);
+			
+			// Initialize game booleans
+			alertedHighscore = false;
+			alertedTaps = false;
+			gamePaused = false;
+			gameOver = false;
+			
+
+			// Initialize staircase 1
+			stair1 = new IdentifiableObject(0, HEIGHT/2 - STAIR_HEIGHT/2, STAIR_WIDTH, STAIR_HEIGHT, "stair1", LEFT_STAIR_SRC);
+			// Initialize staircase 2
+			stair2 = new IdentifiableObject(WIDTH - STAIR_WIDTH, HEIGHT/2 - STAIR_HEIGHT/2, STAIR_WIDTH, STAIR_HEIGHT, "stair2", RIGHT_STAIR_SRC);
+			// Initialize the bed
+			rack = new IdentifiableObject(2, 2, RACK_WIDTH, RACK_HEIGHT, "rack", RACK_SRC);
+			// Initialize the 'Splatter'
+			items[0] = new Item(WIDTH - (ITEM_WIDTH + 2), 2, "item0", SPLATTER_SRC, 'Splatter');
+			// Initialize the mate with TAPS
+			mate = new Mate(2, HEIGHT - MATE_HEIGHT - 2, MATE_WIDTH, MATE_HEIGHT, 0, 0, "mate");
+			
+			// Initialize player
+			player = new Player(/*(Math.floor(Math.random() * (WIDTH + 1 - PLAYER_WIDTH)))*/ WIDTH - PLAYER_WIDTH,
+									   /*(Math.floor(Math.random() * (HEIGHT + 1 - PLAYER_HEIGHT)))*/ HEIGHT - PLAYER_HEIGHT,
+									   PLAYER_WIDTH,
+									   PLAYER_HEIGHT,
+									   0,
+									   0,
+									   "player"
+									   );						   
+			
+			// Randomly place bedbugs on top half of the game area
+			for(var i = 0; i < NUM_BEDBUGS; i++) {
+				bedbugs[i] = new BedBug((Math.floor(Math.random() * (WIDTH + 1 - BEDBUG_WIDTH))),
+										(Math.floor(Math.random() * (HEIGHT/2 + 1 - BEDBUG_HEIGHT))),
+										BEDBUG_HEIGHT, BEDBUG_WIDTH, 0, VELOCITY, "bug" + i);
+			}			
+			
+			// Set up the various functions that occur at set time intervals
+			mainInterval = setInterval("mainLoop()", MAIN_INTERVAL);
+			timeInterval = setInterval("incrementTime()", TIME_INTERVAL);
+			messageInterval = setInterval("clearMessage()", MESSAGE_INTERVAL);
+		}
+		
+		/* 
+		 * Function responsible for all of the action in the game. It moves the player, moves all of the bugs, checking
+		 * to see if any touch the player. If a bug touches the player, the game ends. Then it checks to see if the player
+		 * has touched an item, if so, the item is picked up.It checks if the time is past 2400, if so, and if TAPS has not
+		 * been signed, the game ends. It also checks to see if the user touches the mate, if so, TAPS is signed if it has
+		 * not already been signed. Next, the mate moves if it is after 2245. Finally, it checks if the user touches the rack,
+		 * if the user does touch it, then the game ends if all of the bugs are dead and TAPS has been signed. If either or 
+		 * both prerequisites have not been met, a message is set accordingly and the game continues.
+		 */
+		function mainLoop() {
+			player.move();
+			// Move all bedbugs
+			for(var i = 0; i < bedbugs.length; i++) {
+				bedbugs[i].move();
+				if(player.touches(bedbugs[i])) {
+					endGame(false, 'GAME OVER! You were infected <br> by a bedbug!');
+				}
+			}
+			// Check for pickup of items
+			for(var i = 0; i < items.length; i++) {
+				if(player.touches(items[i])) {
+					player.pickUp(items[i]);
+				}
+			}
+			if(!player.taps) {
+				if(HOUR >= 24) {
+					endGame(false, 'GAME OVER! You didn\'t sign TAPS <br/> before midnight!');
+				}
+				if(player.touches(mate)) {
+					player.taps = true;
+					setMessage('You\'ve signed TAPS. <br/>That means no more leaving deck!', 'green');
+				}
+			}
+			// Mate will move if time is after 2245
+			if(HOUR >= 23 || (HOUR >= 22 && MIN >= 45)) {
+				if(!alertedTaps && !player.taps) {
+					setMessage('It\'s 2245, TAPS is now roaming. <br/> You better hurry up and sign!', 'red');
+					alertedTaps = true;
+				}
+				// Mate moves twice as fast as the player
+				mate.move();
+				mate.move();
+			}
+			// Can only go to bed if TAPS has been signed and all bedbugs have been killed
+			if(player.touches(rack)) {
+				if(!player.taps || !areDead(bedbugs)) {
+					var alertMsg = "You can't go to bed yet, <br/>";
+					if(!player.taps && !areDead(bedbugs)) {
+						alertMsg += "you haven't signed TAPS yet, and <br/> there are still bedbugs on the loose!";
+					}
+					else if(!player.taps) {
+						alertMsg += "you haven't signed TAPS yet!";
+					}
+					else {
+						alertMsg += "there are still bedbugs on the loose!";
+					}
+					setMessage(alertMsg, 'red');
+				}
+				else {
+					endGame(true, 'Congratulations! You rid Bancroft Hall of <br/> bedbugs! Go enjoy some well deserved sleep!')
+				}
+			}
+		}
+		
+		/*
+		 * Ends the execution of the game, and carries out the appropriate action depending on whether or not the player won the game.
+		 * If the player did win, the score is increased by any remaining bonus time. If the player achieved a highscore, the player is
+		 * prompted to enter a username, and the highscore in the database is updated accordingly. If the player did not win, the score 
+		 * is reset to 0. In both cases, a message is displayed to the player, describing the reason for the game being over.
+		 */
+		function endGame(wonGame, msg) {
+			gameOver = true;
+			var msgColor;
+			if(wonGame) {
+				increaseScore(BONUS);
+				msgColor = 'green';
+				if(alertedHighscore) {
+					var username = prompt('Congratulations on achieving a new highscore!\n Enter your name: ');
+					updateHighscore(username, HIGHSCORE);
+				}
+			}
+			else {
+				SCORE = 0;
+				msgColor = 'red';
+			}
+			setMessage(msg, msgColor);
+			// Stop game execution
+			clearInterval(mainInterval);
+			// Stop timer increase
+			clearInterval(timeInterval);
+			// Stop messages from being cleared
+			clearInterval(messageInterval);
+		}
+		
+		/* Asynchronously updates the server with new highscore information. */
+		function updateHighscore(user, score) {
+			var ajaxSettings = {
+				type: "GET",
+				url: "setHighscore.pl?",
+				data: "username=" + user + "&highscore=" + score,
+				error: function(xhr, status, error) { alert("error: " + error ); }
+			}
+			$.ajax(ajaxSettings);
+		}
+		
+		/* 
+		 * Asynchronously requests highscore information from the server. Once the information has been received,
+		 * the scoreboard is updated appropriately.
+		 */
+		function retrieveHighscore() {
+			var ajaxSettings = {
+				type: "GET",
+				contentType: "application/json; charset=utf-8",
+				url: "getHighscore.pl?",
+				success: function(resp) { 
+					setUserHighscore(resp.highscore, resp.username);
+				},
+				error: function(xhr, status, error) { alert("error: " + error ); }
+			}
+			$.ajax(ajaxSettings);
+		}
+		
+		/* 
+		 * Checks if the player has picked up the 'Splatter'. If so, the bug that was clicked
+		 * is retrieved from the list of all bedbugs and removed from the game. The player's
+		 * points are updated accordingly.
+		 */
+		function removeBug(theBug) {
+			if(!gameOver && !gamePaused) {
+				if(player.hasItem('Splatter')) {
+					for(var i = 0; i < bedbugs.length; i++) {
+						// The user actually clicked on the image overlay of the bedbug, so we
+						// look for the bedbug that matches the parent element (the actual bedbug).
+						if(bedbugs[i] != null && bedbugs[i].id == $(theBug.target).parent().attr('id')) {
+							// Remove the bedbug visually
+							bedbugs[i].jquery.remove();
+							// Actually remove the bedbug
+							bedbugs.splice(i, 1);
+							setMessage('You killed the bedbug!', 'green');
+							increaseScore(BEDBUG_POINTS);
+							if(areDead(bedbugs)) {
+								setMessage('You killed the last bedbug! Great work!', 'green');
+							}
+						}
+					}
+				}
+				else {
+					setMessage('You need the Splatter to kill bedbugs', 'red');
+				}
+			}
+		}
+		
+		/* Update the message board with a default message (black text).*/
+		function setMessage(msg) {
+			setMessage(msg, 'black');
+		}
+		/* Update the message board with a message of the specified color. */
+		function setMessage(msg, color) {
+			$("#message").html(msg).css('color', color);
+		}
+		
+		/* Retrieve the currently displayed message. */
+		function getMessage() {
+			return $("#message").html();
+		}
+		
+		/* Clear the message board. */
+		function clearMessage() {
+			$("#message").text("");
+		}
+	
+		/* 
+		 * Increase the player's score by the specified amount of points. If the current highscore is surpassed, 
+		 * the player is notified and the scores are updated appropriately.
+		 */
+		function increaseScore(points) {
+			SCORE += points;
+			$("#score").text(SCORE);
+			if(SCORE > HIGHSCORE) {
+				setUserHighscore(SCORE, "You");
+				if(!alertedHighscore) {
+					setMessage($("#message").text() + "<br/>" + "You set a new HighScore!");
+					alertedHighscore = true;
+				}
+			}
+		}
+		
+		/* Set the displayed highscore to the specified username and value. Update the global variables accordingly. */
+		function setUserHighscore(score, user) {
+			HIGHSCORE = score;
+			HIGHSCORE_USER = user;
+			$("#highscore").text(user + " | " + score);
+		}
+
+		/* 
+		 * Allow for pretty printing of time. Pad the front of the printed time with 0s so that the displayed time
+		 * always uses 4 digits.
+		 */
+		function padTime(time) {
+			var s = "0" + time;
+			return s.substring(s.length-2, s.length);
+		}
+		
+		/* 
+		 * Increment time by 1 minute. If 60 minutes have gone by, reset minutes to 0 and increment hours by 1.
+		 * Subtract 1 point from the time bonus for each game minute that passes. Update the displayed time and
+		 * bonus accordingly.
+		 */
+		function incrementTime() {
+			if( MIN >= 59) {
+				MIN = 0;
+				HOUR++;
+			}
+			else {
+				MIN++;
+			}
+			// Bonus cannot be negative
+			BONUS = (BONUS == 0 ? 0 : BONUS - 1);
+			if(HOUR > 23) {
+				$("#time").text(padTime(HOUR-24) + padTime(MIN));
+			}
+			else {
+				$("#time").text(padTime(HOUR) + padTime(MIN));
+			}
+			$("#bonus").text(BONUS);			
+		}
+		
+		/* Check instances if all of the specified enemy type have been killed. */
+		function areDead(enemy) {
+			if(enemy.length == 0) {
+				return true;
+			}
+			return false;
+		}
+
+		/* 
+		 * Take in key presses from the user and take action accordingly. If the user
+		 * presses the ESC key, treat it as if the pause/resume game buttons were clicked.
+		 */
+		function handleKeypress(e) {	
+			// Change direction if one of the arrow keys or wasd keys was pressed
+			switch(e.which) {
+				case 37: // left
+				case 65: // 'a'
+					player.direction = LEFT;
+					break;
+				case 38: // up
+				case 87: // 'w'
+					player.direction = UP;
+					break;
+				case 39: // right
+				case 68: // 'd'
+					player.direction = RIGHT;
+					break;
+				case 40: // down DOWN;
+				case 83: // 's'
+					player.direction = DOWN;
+					break;
+				case 27: // ESC
+					if(!gamePaused) {
+						$("#pause_button").click();
+					}
+					else {
+						$("#resume_button").click();
+					}
+					break;				
+				default:
+					return; // exit the handler
+			}
+			e.preventDefault();
+		}
+		/* Stop all running intervals and pause until game is resumed. Do nothing if game is already over. */
+		function pauseGame() {
+			if(!gamePaused && !gameOver) {
+				gamePaused = true;
+				clearInterval(mainInterval);
+				clearInterval(timeInterval);
+				clearInterval(messageInterval);
+				setMessage('Game paused', 'red');
+				pauseInterval = setInterval(function () {}, 1000);
+			}
+		}
+		
+		/* 
+		 * Restarts the play of game, the clock, and the message reset invtervals if the game
+		 * is paused and not already over.
+		 */
+		function resumeGame() {
+			// Start mainLoop again only if it was stopped
+			if(gamePaused && !gameOver) {
+				gamePaused = false;
+				clearInterval(pauseInterval);
+				mainInterval = setInterval("mainLoop()", MAIN_INTERVAL);
+				timeInterval = setInterval("incrementTime()", TIME_INTERVAL);
+				messageInterval = setInterval("clearMessage()", MESSAGE_INTERVAL);
+				setMessage('Game resumed', 'green');
+			}
+		}
+
+		// Taken from http://stackoverflow.com/questions/4152931/javascript-inheritance-call-super-constructor-or-use-prototype-chain
+		function extend(base, sub) {
+		  // Avoid instantiating the base class just to setup inheritance
+		  // See https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/create
+		  // for a polyfill
+		  // Also, do a recursive merge of two prototypes, so we don't overwrite 
+		  // the existing prototype, but still maintain the inheritance chain
+		  // Thanks to @ccnokes
+		  var origProto = sub.prototype;
+		  sub.prototype = Object.create(base.prototype);
+		  for (var key in origProto)  {
+			 sub.prototype[key] = origProto[key];
+		  }
+		  // Remember the constructor property was set wrong, let's fix it
+		  sub.prototype.constructor = sub;
+		  // In ECMAScript5+ (all modern browsers), you can make the constructor property
+		  // non-enumerable if you define it like this instead
+		  Object.defineProperty(sub.prototype, 'constructor', { 
+			enumerable: false, 
+			value: sub 
+		  });
+		}
+
+		/* 
+		 * Basic class of object in Rack-Man. It can be seen in the field of play, and can
+		 * be checked for collisions with other IdentifiableObjects. src refers to an image
+		 * to be overlayed on the object.
+		 */
+		function IdentifiableObject(left, top, width, height, id, src){
+			this.loc = [left, top];
+			this.size = [width, height];
+			this.id = id;
+			this.jquery = $("<div></div>");
+			
+			this.jquery.attr('id', id);
+			this.jquery.css('position', 'absolute');
+			this.jquery.css('width', width);
+			this.jquery.css('height', height);
+			this.jquery.css('left', left);
+			this.jquery.css('top', top);
+			
+			// Place object initially
+			GAME_AREA.append(this.jquery);
+			this.jquery.css({left: this.left(), top: this.top()});
+			
+			// Add the image overlay
+			var img = $("<img/>");
+			img.attr('src', src);
+			img.css('width', width);
+			img.css('height', height);
+			this.jquery.append(img);
+		}
+		// Define the methods for IdentifiableObjects
+		IdentifiableObject.prototype = {
+			left:    function() { return this.loc[0]; },
+			right:   function() { return this.loc[0] + this.size[0]; },
+			top:     function() { return this.loc[1]; },
+			bottom:  function() { return this.loc[1] + this.size[1]; },
+			// Determine if this instance has collided with another IdentifiableObject
+			touches: function(obj) {
+				if (( this.left() <= obj.right() ) && ( this.right() >= obj.left() )) {
+					if(( this.top() <= obj.bottom() ) && ( this.bottom() >= obj.top() )) {
+						return true;
+					}
+				}
+				return false;
+			}
+			// Potentially more efficient function call
+			//touches: function(obj) { // potentially faster function call
+				//return !( ( (this.loc[1] + this.size[1]) < (obj.loc[1]) ) || ( this.loc[1] > (obj.loc[1] + obj.size[1]) ) || 
+				//( (this.loc[0] + this.size[0]) < obj.loc[0] || (this.loc[0] > (obj.loc[0] + obj.size[0]) ) ));
+			//}
+		}
+		
+		/* Class of object used to represent items that can be picked up by Rack-Man */
+		function Item(left, top, id, src, name) {
+			IdentifiableObject.call(this, left, top, ITEM_WIDTH, ITEM_HEIGHT, id, src);
+			this.name = name;
+		}
+		extend(IdentifiableObject, Item);
+		
+		/* Class to represent objects that have some notion of movement. */ 
+		function MovableObject(left, top, width, height, dx, dy, id, src) {
+			IdentifiableObject.call(this, left, top, width, height, id, src);
+			this.direction = [dx, dy];
+			this.onStairs = false; //boolean to allow movement between staircases to function properly
+		}
+		MovableObject.prototype = {
+			dx: function() { return this.direction[0]; },
+			dy: function() { return this.direction[1]; },
+			move: function() {
+				if(this.hitWall()) {
+					var currentDir = [this.dx(), this.dy()];
+					// If a wall is hit, change directions
+					while(this.direction[0] == currentDir[0] && this.direction[1] == currentDir[1]) {
+						this.direction = DIRECTIONS[Math.floor(Math.random() * 4)];
+					}
+				}
+				else {
+					// 5% chance of changing direction without hitting wall
+					if(Math.floor(Math.random() * 100) <= 5) { 
+						this.direction = DIRECTIONS[Math.floor(Math.random() * 4)];
+					}
+					// Keep track of when object is on staircase so that movement 
+					// between staircases only occurs once per time on staircase
+					if (this.onStairs) {
+						// No longer on either staircase
+						if (!(this.touches(stair1) || this.touches(stair2))) {
+							this.onStairs = false;
+						}
+						// Move normally if already on staircase
+						this.loc[0] += this.dx();
+						this.loc[1] += this.dy();
+					}
+					else {
+						if (this.touches(stair1)) {
+							this.onStairs = true;
+							// Move to staircase 2
+							this.loc[0] = stair2.loc[0];
+							this.loc[1] = stair2.loc[1];
+						}
+						else if (this.touches(stair2)) {
+							this.onStairs = true;
+							// Move to staircase 1
+							this.loc[0] = stair1.loc[0];
+							this.loc[1] = stair1.loc[1];
+						}
+						else {
+							// Move normally if touching staircase
+							this.loc[0] += this.dx();
+							this.loc[1] += this.dy();
+						}
+					}
+					// Visually show movement
+					this.jquery.css({left: this.left(), top: this.top()});
+				}
+			},
+			// Check whether we will hit wall given current position and direction of movement
+			hitWall: function() {							
+				if(this.left() + this.dx() < LEFT_WALL) {
+					return true;
+				}
+				if(this.right() + this.dx() > RIGHT_WALL) {
+					return true;
+				}
+				if(this.top() + this.dy() < TOP_WALL) {
+					return true;
+				}
+				if(this.bottom() + this.dy() > BOTTOM_WALL) {
+					return true;
+				}
+				return false;
+			}
+		}
+		extend(IdentifiableObject, MovableObject);
+		
+		/* Class of object that can be controlled by the human player. */
+		function Player(left, top, width, height, dx, dy, id) {
+			MovableObject.call(this, left, top, width, height, dx, dy, id, PLAYER_SRC);
+			this.taps = false;
+			this.items = []; // array of items currently held
+		}
+		Player.prototype = {
+			// Pick up an item and remove it from the level
+			pickUp: function(theItem) {
+				for(var i = 0; i < items.length; i++) {
+					if(items[i] == theItem) {
+						setMessage("Player picked up " + theItem.name + "!", "green");
+						this.items[this.items.length] = theItem.name;
+						// Remove image of item from the DOM
+						items[i].jquery.remove();
+						// Actually remove the item
+						items.splice(i, 1);
+					}
+				}
+			},
+			hasItem: function(itemName) {
+				for(var i = 0; i < this.items.length; i++) {
+					if(itemName == this.items[i]) {
+						return true;
+					}
+				}
+				return false;
+			},
+			move: function() {
+				// Going to touch wall
+				if(this.hitWall()) {
+					// Stop moving
+					this.direction = [0,0];
+				}
+				else {
+					// Currently inside staircase area
+					if (this.onStairs) {
+						if (!(this.touches(stair1) || this.touches(stair2))) {
+							this.onStairs = false;
+						}
+						this.loc[0] += this.dx();
+						this.loc[1] += this.dy();
+					}
+					else {
+						// Not inside staircase area
+						if (this.touches(stair1)) {
+							this.onStairs = true;
+							if (this.taps) {
+								// Don't travel to other staircase if TAPS signed already
+								setMessage("You can't leave deck, <br>that's an Honor Offense!", 'red');
+							}
+							else {
+								// Travel to other staircase if TAPS not signed
+								this.loc[0] = stair2.loc[0];
+								this.loc[1] = stair2.loc[1];
+							}
+						}
+						else if (this.touches(stair2)) {
+							this.onStairs = true;
+							if (this.taps) {
+								// Don't travel to other staircase if TAPS signed already
+								setMessage("You can't leave deck, <br>that's an Honor Offense!", 'red');
+							}
+							else {
+								// Travel to other staircase if TAPS not signed
+								this.loc[0] = stair1.loc[0];
+								this.loc[1] = stair1.loc[1];
+							}
+						}
+						else {
+							// Move normally if not touching either staircase
+							this.loc[0] += this.dx();
+							this.loc[1] += this.dy();
+						}
+					}
+					// Visually show movement
+					this.jquery.css({left: this.left(), top: this.top()});
+				}
+			}
+		}
+		extend(MovableObject, Player);
+		
+		/* Class defining the Company Mate of the Deck who carries the TAPS log. */
+		function Mate(left, top, width, height, dx, dy, id) {
+			MovableObject.call(this, left, top, width, height, dx, dy, id, MATE_SRC);
+		}
+		Mate.prototype = {
+			dx: function() { return this.direction[0]; },
+			dy: function() { return this.direction[1]; },
+			move: function() {
+				if(this.hitWall()) {
+					var currentDir = [this.dx(), this.dy()];
+					// Change direction if the wall will be hit
+					while(this.direction[0] == currentDir[0] && this.direction[1] == currentDir[1]) {
+						this.direction = DIRECTIONS[Math.floor(Math.random() * 4)];
+					}
+				}
+				else {
+					// Mate moves similar to generic MovableObject except with only 0.5% chance 
+					// of changing direction.
+					if(Math.floor(Math.random() * 100) <= .5) { 
+						this.direction = DIRECTIONS[Math.floor(Math.random() * 4)];
+					}
+					this.loc[0] += this.dx();
+					this.loc[1] += this.dy();
+				}
+				// Visually show movement
+				this.jquery.css({left: this.left(), top: this.top()});
+			}
+		}
+		extend(MovableObject, Mate);
+		
+		/* 
+		 * Class defining the bedbugs. They are only different from the generic MovableObject
+		 * in that they call the removeBug() function when they are clicked by the user.
+		 */
+		function BedBug(left, top, width, height, dx, dy, id) {
+			MovableObject.call(this, left, top, width, height, dx, dy, id, BEDBUG_SRC);
+			this.jquery.mousedown(removeBug);
+		}
+		extend(MovableObject, BedBug);
+
+	</script>
+	</head>
+	<body style="background-image:url(img/rack.jpg); background-repeat: no-repeat">
+	<div id="start_screen" style="background-color:white">
+	<h1 class="top-buffer text-center"> RACK-MAN </h1>
+	<h3 class="text-center"> A tired Midshipman's struggle to get to bed </h3>
+	<br/>
+	<p class="text-center"> Bedbugs have once again descended on Bancroft Hall. Help our hero Rack-Man cleanse
+	the halls of the infestation so he can <br/>sleep soundly in his bed. Use the <kbd>Up</kbd>, <kbd>Down</kbd>, 
+	<kbd>Left</kbd>, and <kbd>Right</kbd> arrows or the <kbd>W</kbd>, <kbd>A</kbd>, <kbd>S</kbd>, and <kbd>D</kbd>
+	keys to control Rack-Man. Avoid <br/>touching the bedbugs, as that will surely get Rack-Man quarantined.
+	Collect the <code>SPLATTER</code>, and the bug killing begins! Click on the bedbugs <br/>to squash them into oblivion.
+	Each bedbug killed gives you points and brings Rack-Man closer to his much needed sleep.
+	Make sure to find the<br/> Mate and sign TAPS before midnight, or its <strong>GAME OVER</strong> for you! But don't make
+	him wait  for long, or he will start furiously searching for you. The game is over<br/> once Rack-Man makes it to his
+	bed after signing TAPS and killing all the bedbugs. Do it quick enough and you just might get some <strong><em>BONUS POINTS</em></strong>!
+	</p>
+	<button onclick="init()" class="btn btn-primary center-block" autofocus>Start Game</button>
+	<p>&nbsp;</p>
+	</div>
+
+	<!-- Removed validator from page because it renders in the middle of the game areas -->
+    <!-- ***************************************************************
+       Below this point is text you should include on every page
+       *************************************************************** -->
+	<div class='row'>
+	<div id='footer' class='col-md-12'>
+    <p><br/><br/> </p>
+    <hr/>
+    <div> If you experience any issues on the site or have suggestions to improve it, 
+	please <a href="mailto:m152196@usna.edu"> email the Webmaster</a>.
+    </div>
+    <p>
+       	<script type = "text/javascript">
+	 document.write('<a href="http://intranet.cs.usna.edu:8888/?doc='+document.location+'">' +
+        '<img src="http://www.w3.org/html/logo/img/mark-word-icon.png"'+
+		'alt="Valid HTML 5!" height="50" width="50" />'+
+      '</a>');
+	    </script>  
+      This page last modified 
+    <script type="text/javascript">
+      document.write(document.lastModified);
+    </script>
+  </p>
+  </div>
+  </div>
+  -->
+  
+	
+</body>
+</html>
+  

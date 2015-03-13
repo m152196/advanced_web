@@ -1,0 +1,15 @@
+TODO:
+1. Bedbugs mating to produce more bedbugs
+2. Add obstacles
+
+FEEDBACK:
+1. bugs get stuck sometimes and stay in top half
+2. More Powerups! (Bug spray, super speed, snack(make time slow down)). They would pop in and out at random times during the game
+3. adjusting the click size of the bedbugs
+4. add two sets of stairs, as in a cross pattern with one pair running sideways and the other running vertically
+5.  have one of the bedbug icons be a Gunny just for laughs
+6.  It should be playable after you beat the regular mode. After you beat the regular mode, have a prompt come up and say " Ya think you are hardcore enough for insane mode? Try this out!"
+7. have things scale as they beat it more often. Maybe add more bugs, more special bugs, make the bugs smaller/faster, make taps roam earlier or time go faster
+8. the interface is very clunky for squishing bugs, perhaps give the player a target reticle.
+9. the swatter is OP, perhaps give it a maximum range.
+10. the clock is important, but difficult to look at in the middle of a bug squashing massacre, perhaps have important times be flashed on the play area?

@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<!--
+	Aaron Fleming
+	152196
+	Lab02
+-->
+
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>DOM Manipulation</title>
+  <link rel="stylesheet" type="text/css" href="styles.css" />
+  
+    <script>
+	var currentAction = null; // The current dynamic action to be performed
+	var copiedNode = null;    // Stores contents of copied/cut node
+	var chosenColor = null;   // Color to be selected by the user
+	
+	/* Copy the text and all style elements of the input node into copiedNode. */
+	function copy(node) {
+		// Only create copiedNode once. Allows warning to be given if user attempts
+		// to paste before copying or cutting.
+		if (copiedNode == null) {
+		    copiedNode = document.createElement("td");
+		}
+		copiedNode.innerHTML = node.innerHTML;
+		copiedNode.style.color = node.style.color;
+		copiedNode.style.fontWeight = node.style.fontWeight;
+		copiedNode.style.fontStyle = node.style.fontStyle;
+		copiedNode.style.textDecoration = node.style.textDecoration;
+		copiedNode.style.backgroundColor = node.style.backgroundColor;
+	}
+	
+	/* Reset all style elements to their default values for the input node. */
+	function reset(node) {
+	    node.style.color="black";
+		node.style.fontWeight="normal";
+		node.style.fontStyle="normal";
+		node.style.textDecoration="none";
+		node.style.backgroundColor="white";
+	}
+
+	/* Prompt user for desired color and set chosenColor accodringly. */
+	function chooseColor() {
+		chosenColor = prompt('Enter your desired color.');
+	}
+	
+	/* Prompt user for desired color and set the document's background color accordingly. */
+    function changeDocumentBgColor() {
+		chooseColor();
+		document.body.style.backgroundColor = chosenColor;
+		changeAction(null); // This is not a dynamic change
+	}
+	
+	/*
+	 * Prompts user for the type of elements to change. Then prompts for the desired color.
+	 * Each element of the specified tag then has its background color changed to that specified.
+	 */
+	function changeBgColorByTag() {
+		var tag = prompt('Which elements would you like to change? (body, h1, h3, table, td, etc.)');
+		var elements = document.getElementsByTagName(tag);
+		chooseColor();
+		for (var i = 0; i < elements.length; i++) {
+			elements[i].style.backgroundColor = chosenColor;
+		}
+		changeAction(null); // This is not a dynamic change
+	}
+	
+	/* 
+	 * Replace the text of every cell in the table with their corresponding numbers. Cells are
+	 * numbered starting at zero and increasing from left to right, and top to bottom.
+	 */
+	function numberCells() {
+		var cells = document.getElementsByTagName('td');
+		for (var i = 0; i < cells.length; i++) {
+			// Insert a space before and after number to make cells appear bigger
+			cells[i].innerHTML = "&nbsp" + i + "&nbsp";
+		}
+		changeAction(null); // This is not a dynamic change
+	}
+	
+	/* Update the current action and set the action header accordingly. */
+	function changeAction(action) {
+		currentAction = action;
+		switch(action) {
+			case 'edit':
+				setActionHeader("Cursor now in 'edit' mode. Click on cells to edit their text.");
+				break;
+			case 'insertCellLeft':
+				setActionHeader("Cursor now in 'insert cell left' mode. A new cell will be inserted to " +
+								"the left of each cell that is clicked.");
+				break;
+			case 'insertRight':
+				setActionHeader("Cursor now in 'insert cell right' mode. A new cell will be inserted to " +
+								"the right of each cell that is clicked.");
+				break;
+			case 'insertRowAbove':
+				setActionHeader("Cursor now in 'insert row above' mode. A new row will be inserted above " +
+								"each row that is clicked.");
+				break;
+			case 'insertRowBelow':
+				setActionHeader("Cursor now in 'insert row below' mode. A new row will be inserted below " +
+								"each row that is clicked.");
+				break;
+			case 'delete':
+				setActionHeader("Cursor now in 'delete' mode. Click on cells to delete them.");
+				break;
+			case 'deleteRow':
+				setActionHeader("Cursor now in 'delete row' mode. Click on rows to delete them.");
+				break;
+			case 'bold':
+				setActionHeader("Cursor now in 'bold' mode. Click on cells to bold their text.");
+				break;		
+			case 'italics':
+				setActionHeader("Cursor now in 'italic' mode. Click on cells to italicize their text.");
+				break;
+			case 'overline':
+				setActionHeader("Cursor now in 'overline' mode. Click on cells to place lines over their text.");
+				break;
+			case 'strike':
+				setActionHeader("Cursor now in 'strike through' mode. Click cells to cross out their text.");
+				break;
+			case 'underline':
+				setActionHeader("Cursor now in 'underline' mode. Click on cells to place lines under their text.");
+				break;
+			case 'cellTextColor':
+				setActionHeader("Cursor now in 'color cell text' mode. Click on cells to change their " +
+								"text to the specified color.");
+				chooseColor();
+				break;
+			case 'rowTextColor':
+				setActionHeader("Cursor now in 'color row text' mode. Click on cells to change the text " +
+								"of every element in the row to the specified color.");
+				chooseColor();
+				break;
+			case 'cellBgColor':
+				setActionHeader("Cursor now in 'color cell background' mode. Click on cells to change " +
+								"their backgrounds to the specified color.");
+				chooseColor();
+				break;
+			case 'rowBgColor':
+				setActionHeader("Cursor now in 'color row background' mode. Click on cells to change " +
+								"the backgrounds of every element in the row to the specified color.");
+				chooseColor();
+				break;
+			case 'reset':
+				setActionHeader("Cursor now in 'style reset' mode. Click on cells to remove all style changes.");
+				break;		
+			case 'copy':
+				setActionHeader("Cursor now in 'copy' mode. Click on a cell to copy its contents. (Should " +
+								"be followed by a paste).");
+				break;		
+			case 'cut':
+				setActionHeader("Cursor now in 'italic' mode. Click on a cell to cut its contents. (Should be " +
+								"followed by a paste).");
+				break;		
+			case 'paste':
+				setActionHeader("Cursor now in 'paste' mode. Click on cells to replace their contents with " +
+								"the previously copied or cut cell. (Must be preceded by a copy or cut).");
+				break;
+			case null:
+				setActionHeader("No active cursor mode.");
+				break;
+			default:
+				setActionHeader("Cursor now in '" + action + "' mode.");
+				break;
+		}
+	}
+	
+	/* 
+	 * Change the text in the header above the table to provide instructions
+	 * on the current action.
+	 */
+	function setActionHeader(text) {
+		header = document.getElementById('mode');
+		header.innerHTML = text;
+	}	
+	
+	/*
+	 * Dynamic call to update node. This method allows the node itself to be
+	 * passed as an argument to the doUpdate function.
+	 */
+	function doUpdateDyn() {
+	    doUpdate(this);
+	}
+	
+	/* Update the selected node based on the chosen action. */
+	function doUpdate(curNode) {
+	    var parent = curNode.parentNode;
+		
+		switch (currentAction) {
+			// Change the text of the current node
+			case 'edit':
+				curNode.innerHTML = prompt('Enter new text.');
+			    break;
+			
+			// Insert a new node to the left of the current node
+			case 'insertCellLeft':
+				var newNode = document.createElement("td");
+				newNode.onclick=doUpdateDyn;
+				parent.insertBefore(newNode, curNode);
+			    break;
+				
+			// Insert a new node to the right of the current node
+			case 'insertCellRight':
+				var newNode = document.createElement("td");
+				newNode.onclick=doUpdateDyn;
+				// Get next cell in the current row
+				var nextSibling = curNode.nextElementSibling;
+				if(nextSibling != null) {
+					parent.insertBefore(newNode, nextSibling);
+				}
+				else {
+					// Add new node to end of parent's children
+					parent.appendChild(newNode);
+				}
+			    break;
+				
+			// Insert a new row above the current node
+			case 'insertRowAbove':
+				var grandParent = parent.parentNode;
+				var newRow = document.createElement("tr");
+				// Add one cell to the new row to allow interaction with the row
+				var rowChild = document.createElement("td");
+				rowChild.onclick=doUpdateDyn;
+				newRow.appendChild(rowChild);
+				grandParent.insertBefore(newRow, parent);
+			    break;
+				
+			// Insert a new row below the current node
+			case 'insertRowBelow':
+				var grandParent = parent.parentNode;
+				var newRow = document.createElement("tr");
+				// Add one cell to the new row to allow interaction with the row
+				var rowChild = document.createElement("td");
+				rowChild.onclick=doUpdateDyn;
+				newRow.appendChild(rowChild);
+				var parentSibling = parent.nextElementSibling;
+				if(parentSibling != null) {
+					grandParent.insertBefore(newRow, parentSibling);
+				}
+				else {
+					// Add new node to end of grandparent's children
+					grandParent.appendChild(newRow);
+				}
+			    break;
+				
+			// Delete selected node
+			case 'delete':
+				parent.removeChild(curNode);
+			    break;
+				
+			// Delete the selected row
+			case 'deleteRow':
+				var grandparent = parent.parentNode;
+				grandparent.removeChild(parent);
+				break;
+				
+			// Bold the text in the current node
+			case 'bold':
+				curNode.style.fontWeight="bold";
+			    break;
+				
+			// Italicize the text in the selected node
+			case 'italics':
+				curNode.style.fontStyle="italic";
+			    break;
+				
+			// Draw a line over the text in the selected node.
+			case 'overline':
+				curNode.style.textDecoration="overline";
+			    break;
+				
+			// Draw a line through the text in the selected node.
+			case 'strike':
+				curNode.style.textDecoration="line-through";
+			    break;
+				
+			// Draw a line under the text in the selected node.
+			case 'underline':
+				curNode.style.textDecoration="underline";
+			    break;
+			
+			// Change text color of selected node to the color that was specified.
+			case 'cellTextColor':
+				curNode.style.color = chosenColor;
+			    break;
+			
+			// Change text color of all nodes in the row of the selected node
+			// to the color that was specified.
+			case 'rowTextColor':
+				var children = parent.children;
+				for( var i = 0; i < children.length; i++) {
+						children[i].style.color = chosenColor;
+				}
+				break;
+				
+			// Change background of selected node to the color that was specified.
+			case 'cellBgColor':
+				curNode.style.backgroundColor = chosenColor;
+			    break;
+			
+			// Change background of all nodes in the row of the selected node
+			// to the color that was specified.
+			case 'rowBgColor':
+				var children = parent.children;
+				for( var i = 0; i < children.length; i++) {
+						children[i].style.backgroundColor = chosenColor;
+				}
+				break;
+				
+			// Reset any styles that might have been changed.
+			case 'reset':
+				reset(curNode);
+			    break;
+				
+			// Make a copy of the selected node. This copy is used if the 'paste' action
+			// is selected.
+			case 'copy':
+				copy(curNode);
+			    break;
+				
+			// Same as copy, but the selected node then has its text deleted and any styling reset.
+			case 'cut':
+				copy(curNode);
+				curNode.innerHTML = ""; 
+				reset(curNode);
+			    break;
+				
+			// Changes the selected node to match the copied node in every way.
+			case 'paste':
+				if(copiedNode != null) {
+					curNode.innerHTML = copiedNode.innerHTML;
+					curNode.style.color = copiedNode.style.color;
+					curNode.style.fontWeight = copiedNode.style.fontWeight;
+					curNode.style.fontStyle = copiedNode.style.fontStyle;
+					curNode.style.textDecoration = copiedNode.style.textDecoration;
+					curNode.style.backgroundColor = copiedNode.style.backgroundColor;
+				}
+				else {
+					alert('You must copy a cell before you can paste!');
+				}
+			    break;
+		}
+	}
+  </script>
+</head>
+
+<body>
+
+  <h1> Document Object Model Manipulation  </h1>
+  <h3> Use the actions below to try some of the many different ways that you can interact
+       with the DOM. </h3>
+  <div id='actions'>
+  <h4>Actions: </h4>
+  <ul>
+	<li><span onclick="changeAction('edit')">Edit</span></li>
+	<li><span onclick="changeAction('insertCellLeft')">Insert Cell (left)</span></li>
+	<li><span onclick="changeAction('insertCellRight')">Insert Cell (right)</span></li>
+	<li><span onclick="changeAction('insertRowAbove')">Insert Row (above)</span></li>
+	<li><span onclick="changeAction('insertRowBelow')">Insert Row (below)</span></li>
+	<li><span onclick="changeAction('delete')">Delete Cell</span></li>
+	<li><span onclick="changeAction('deleteRow')">Delete Row</span></li>
+	<li><span onclick="changeAction('bold')"><b>Bold</b></span></li>
+	<li><span onclick="changeAction('italics')"><i>Italics</i></span></li>
+	<li><span onclick="changeAction('overline')" style="text-decoration:overline">Overline</span></li>
+	<li><span onclick="changeAction('strike')"><s>Strike through</s></span></li>
+	<li><span onclick="changeAction('underline')"><u>Underline</u></span></li>
+	<li><span onclick="changeDocumentBgColor()">Set Document Background Color</span></li>
+	<li><span onclick="changeAction('cellTextColor')">Set Cell Text Color</span></li>
+	<li><span onclick="changeAction('rowTextColor')">Set Row Text Color</span></li>
+	<li><span onclick="changeAction('cellBgColor')">Set Cell Background Color</span></li>
+	<li><span onclick="changeAction('rowBgColor')">Set Row Background Color</span></li>
+	<li><span onclick="changeBgColorByTag()">Set Background Color by Tag Type</span></li>
+	<li><span onclick="changeAction('reset')">Reset Cell Style</span></li>
+	<li><span onclick="changeAction('copy')">Copy</span></li>
+	<li><span onclick="changeAction('cut')">Cut</span></li>
+	<li><span onclick="changeAction('paste')">Paste</span></li>
+	<li><span onclick="numberCells()">Number Cells</span></li>
+  </ul>
+  </div>
+  <h3 id='mode'>No active cursor mode.</h3>
+  <table class='center'>
+    <tr>
+	  <td onclick="doUpdate(this)"> (0, 0) </td>
+	  <td onclick="doUpdate(this)"> (0, 1) </td>
+	  <td onclick="doUpdate(this)"> (0, 2) </td>
+	</tr>
+	<tr>
+	  <td onclick="doUpdate(this)"> (1, 0) </td>
+	  <td onclick="doUpdate(this)"> (1, 1) </td>
+	  <td onclick="doUpdate(this)"> (1, 2) </td>
+	</tr>
+	<tr>
+	  <td onclick="doUpdate(this)"> (2, 0) </td>
+	  <td onclick="doUpdate(this)"> (2, 1) </td>
+	  <td onclick="doUpdate(this)"> (2, 2) </td>
+	</tr>
+  </table>
+  <!-- ***************************************************************
+       Below this point is text you should include on every page
+       *************************************************************** -->
+  <div id='footer'>
+  <p><br/><br/> </p>
+  <hr/>
+  <div> If you experience any issues on the site or have suggestions to improve it, 
+	please <a href="mailto:m152196@usna.edu"> email the Webmaster</a>.
+  </div>
+  <p>
+   	<script type = "text/javascript">
+	 document.write('<a href="http://intranet.cs.usna.edu:8888/?doc='+document.location+'">' +
+        '<img src="http://www.w3.org/html/logo/img/mark-word-icon.png"'+
+		'alt="Valid HTML 5!" height="50" width="50" />'+
+      '</a>');
+	</script>  
+    This page last modified 
+    <script type="text/javascript">
+      document.write(document.lastModified);
+    </script>
+  </p>
+  </div>
+
+
+</body>
+
+</html>
+  
